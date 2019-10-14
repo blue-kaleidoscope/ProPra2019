@@ -80,47 +80,7 @@ public class ImageHelper {
 					ErrorCodes.INVALID_FILEPATH);
 		}
 		return fileExtension.toLowerCase();
-	}
-	
-	/**
-	 * Returns image dimensions of an image based on the image header data.
-	 * @param headerData an array which contains either the header data or the whole image data including
-	 * the header data.
-	 * @param fileExtension the file extension of the file containing the image data. Must either be "propra" or "tga".
-	 * @return the image data as an array with length <code>2</code> whereas the first entry contains the width and the
-	 * second entry contains the height of the image. 
-	 * @throws ImageHandlingException if the file format is neither "propra" nor "tga" or when <code>headerData</code> is empty.
-	 */
-	public static int[] getImageDimensions(byte[] headerData, String fileExtension) throws ImageHandlingException {
-		String errorMessage;
-		if (headerData == null || headerData.length == 0 || fileExtension == null || fileExtension.equals("")) {
-			errorMessage = "Could not get image dimensions. Invalid input data.";
-			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_FILEPATH);
-		}
-		
-		int arrayOffset = 0; // To use the same code for both file formats.
-		int[] imageDimensions = new int[2];
-		String hexTmp;
-		
-		if (fileExtension.equals("propra")) {			
-			arrayOffset = 10;
-		} else if (fileExtension.equals("tga")) {			
-			arrayOffset = 12;
-		} else {			
-			errorMessage = "Unknown output file format.";
-			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_FILEFORMAT);
-		}
-		
-		// Get source image dimensions from header.		 
-		hexTmp = String.format("%02x", headerData[arrayOffset + 1]) + 
-				String.format("%02x", headerData[arrayOffset]);
-		imageDimensions[0] = Integer.parseInt(hexTmp, 16); // width
-		hexTmp = String.format("%02x", headerData[arrayOffset + 3]) + 
-				String.format("%02x", headerData[arrayOffset + 2]);
-		imageDimensions[1] = Integer.parseInt(hexTmp, 16); // height
-		
-		return imageDimensions;
-	}
+	}	
 	
 	/**
 	 * To extract the bytes of a file.

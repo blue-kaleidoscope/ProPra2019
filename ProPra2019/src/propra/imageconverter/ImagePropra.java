@@ -3,10 +3,23 @@ package propra.imageconverter;
 public class ImagePropra extends Image {
 	private final String HEADER_TEXT = "ProPraWS19";
 
+	/**
+	 * Creates a new <code>ImagePropra</code> for an existing propra image file according to the <code>filePath</code>.
+	 * Do not call this constructor for not yet existing image files (such as output image files before a
+	 * conversion took place).
+	 * @param filePath the path to an existing propra image file.
+	 * @throws ImageHandlingException an exception is thrown when this <code>ImagePropra</code> could not be created out of
+	 * the file.
+	 */
 	public ImagePropra(String filePath) throws ImageHandlingException {
 		super(filePath);
 	}
 	
+	/**
+	 * Creates a new <code>ImagePropra</code> for a not yet existing propra image file.
+	 * Use this constructor for not yet existing propra image files (such as output propra image files before
+	 * a conversion took place).
+	 */
 	public ImagePropra() {
 		super();
 	}
@@ -21,7 +34,8 @@ public class ImagePropra extends Image {
 
 	@Override
 	protected void checkHeader() throws ImageHandlingException {
-		// Check if compression is valid.
+		
+		// Check if compression type is valid.
 		String hexTmp;
 		hexTmp = String.format("%02x", imageData[15]);
 		if (compressionType != Integer.parseInt(hexTmp, 16)) {

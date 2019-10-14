@@ -3,18 +3,42 @@ package propra.imageconverter;
 public class ImageTGA extends Image {
 	private byte origin;
 	
+	/**
+	 * Creates a new <code>ImageTGA</code> for an existing tga image file according to the <code>filePath</code>.
+	 * Do not call this constructor for not yet existing image files (such as output image files before a
+	 * conversion took place).
+	 * @param filePath the path to an existing tga image file.
+	 * @throws ImageHandlingException an exception is thrown when this <code>ImageTGA</code> could not be created out of
+	 * the file.
+	 */
 	public ImageTGA(String filepath) throws ImageHandlingException {
 		super(filepath);
 	}
 	
+	/**
+	 * Creates a new <code>ImageTGA</code> for a not yet existing tga image file.
+	 * Use this constructor for not yet existing tga image files (such as output tga image files before
+	 * a conversion took place).
+	 */
 	public ImageTGA() {
 		super();
 	}
 
+	
+
+	@Override
+	protected void setProperties() {
+		headerLength = 18;
+		compressionType = 2; // uncompressed RGB
+		bitsPerPixel = 24;
+		origin = 32; // origin top-left
+		fileExtension = "tga";
+	}
+	
 	@Override
 	protected void checkHeader() throws ImageHandlingException {		
 
-		// Check if compression is valid.
+		// Check if compression type is valid.
 		String hexTmp;
 		hexTmp = String.format("%02x", imageData[2]);
 		if (compressionType != Integer.parseInt(hexTmp, 16)) {			
@@ -41,15 +65,6 @@ public class ImageTGA extends Image {
 			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_HEADERDATA);
 		}
 
-	}
-
-	@Override
-	protected void setProperties() {
-		headerLength = 18;
-		compressionType = 2; // uncompressed RGB
-		bitsPerPixel = 24; // 24 bits per pixel
-		origin = 32; // origin top-left
-		fileExtension = "tga";
 	}
 
 	@Override

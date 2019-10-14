@@ -10,39 +10,13 @@ package propra.imageconverter;
  * @author Oliver Eckstein
  *
  */
-/*public class ImageConverter {
-	
-	public static void main(String[] args) {
-		System.out.println(" +++ ImageConverter started +++");
-		
-		if (args.length != 2) {
-			System.err.println("Not enough arguments specified.");
-			System.exit(123);
-		}
-
-		String inputPath = args[0].replace("--input=", "");
-		String outputPath = args[1].replace("--output=", "");
-
-		ImageChecker checker = new ImageChecker();
-		ImageWriter writer = new ImageWriter();
-		try {			
-			checker.isValid(inputPath, outputPath);
-			writer.writeData(inputPath, outputPath);
-		} catch (ImageHandlingException e) {
-			System.err.println(e.getMessage());
-			System.out.println(" +++ Shutting down ImageConverter +++");
-			System.exit(123);
-		}
-		System.out.println(" +++ Shutting down ImageConverter +++");
-	}
-}*/
-
 public class ImageConverter {
 	public static void main(String[] args) {
 		System.out.println(" +++ ImageConverter started +++");
 		
 		if (args.length != 2) {
 			System.err.println("Not enough arguments specified.");
+			System.out.println(" +++ Error while converting - Shutting down ImageConverter +++");
 			System.exit(123);
 		}
 
