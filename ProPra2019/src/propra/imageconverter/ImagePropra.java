@@ -105,17 +105,29 @@ public class ImagePropra extends Image {
 	}
 
 	@Override
-	protected void setWidthInHeader() {
+	protected void setWidthInHeader() throws ImageHandlingException {
 		byte[] widthInBytes = ImageHelper.hexStringToByteArray(Integer.toHexString(width));
-		imageData[10] = widthInBytes[1];
-		imageData[11] = widthInBytes[0];
+		try {
+			imageData[10] = widthInBytes[1];
+			imageData[11] = widthInBytes[0];
+		} catch (ArrayIndexOutOfBoundsException e) {
+			throw new ImageHandlingException("Invalid header data.", 
+					ErrorCodes.INVALID_HEADERDATA);
+		}
+		
+		
 	}
 
 	@Override
-	protected void setHeightInHeader() {
+	protected void setHeightInHeader() throws ImageHandlingException {
 		byte[] widthInBytes = ImageHelper.hexStringToByteArray(Integer.toHexString(height));
-		imageData[12] = widthInBytes[1];
-		imageData[13] = widthInBytes[0];
+		try {
+			imageData[12] = widthInBytes[1];
+			imageData[13] = widthInBytes[0];
+		} catch (ArrayIndexOutOfBoundsException e) {
+			throw new ImageHandlingException("Invalid header data.", 
+					ErrorCodes.INVALID_HEADERDATA);
+		}		
 	}
 
 	@Override
@@ -131,7 +143,7 @@ public class ImagePropra extends Image {
 	}
 
 	@Override
-	public void setImage(int width, int height, byte[] dataSegment) {
+	public void setImage(int width, int height, byte[] dataSegment) throws ImageHandlingException {
 		super.setImage(width, height, dataSegment);
 
 		/*

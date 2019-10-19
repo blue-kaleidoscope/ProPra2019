@@ -51,7 +51,7 @@ public abstract class Image {
 	 * @param height the image's height.
 	 * @param dataSegment the image's data segment.
 	 */
-	public void setImage(int width, int height, byte[] dataSegment) {
+	public void setImage(int width, int height, byte[] dataSegment) throws ImageHandlingException {
 		this.width = width;
 		this.height = height;
 		setWidthInHeader();
@@ -105,13 +105,15 @@ public abstract class Image {
 	
 	/**
 	 * To set the width into the header of this <code>Image</code>.
+	 * @throws ImageHandlingException when width cannot be set.
 	 */
-	protected abstract void setWidthInHeader();
+	protected abstract void setWidthInHeader() throws ImageHandlingException;
 	
 	/**
 	 * To set the height into the header of this <code>Image</code>.
+	 * @throws ImageHandlingException when height cannot be set.
 	 */
-	protected abstract void setHeightInHeader();
+	protected abstract void setHeightInHeader() throws ImageHandlingException;
 	
 	/**
 	 * To define properties which are unique for this type of <code>Image</code>.
