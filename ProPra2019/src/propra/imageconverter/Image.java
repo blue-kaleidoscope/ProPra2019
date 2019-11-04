@@ -1,5 +1,7 @@
 package propra.imageconverter;
 
+import java.io.File;
+
 /**
  * This class describes an image which can be handled by the ImageConverter.
  * @author Oliver Eckstein
@@ -14,6 +16,7 @@ public abstract class Image {
 	protected byte bitsPerPixel;
 	protected String filePath;
 	protected String fileExtension;
+	protected File file;
 	
 	/**
 	 * Creates a new <code>Image</code> for an existing image file according to the <code>filePath</code>.
@@ -29,7 +32,8 @@ public abstract class Image {
 					ErrorCodes.INVALID_FILEPATH);			
 		}
 		this.filePath = filePath;		
-		this.imageData = ImageHelper.getBytesOfFile(filePath);		
+		this.imageData = ImageHelper.getBytesOfFile(filePath);
+		this.file = new File(filePath);
 		setProperties();
 		checkHeader();		
 		System.out.println("Image header information successfully checked: " + filePath);
@@ -42,7 +46,7 @@ public abstract class Image {
 	 */
 	public Image() {
 		setProperties();
-		createHeader();
+		createHeader();		
 	}
 	
 	/**
@@ -83,6 +87,16 @@ public abstract class Image {
 		return tmp;
 	}
 	
+	public void setWidth(int width) throws ImageHandlingException {
+		this.width = width;
+		setWidthInHeader();
+	}
+	
+	public void setHeight(int height) throws ImageHandlingException {
+		this.height = height;
+		setHeightInHeader();
+	}
+	
 	public int getWidth() {
 		return width;
 	}
@@ -101,6 +115,19 @@ public abstract class Image {
 	
 	public void setPath(String filePath) {
 		this.filePath = filePath;
+		this.file = new File(filePath);
+	}
+	
+	public File getFile() {
+		return this.file;
+	}
+	
+	public int getHeaderLength() {
+		return this.headerLength;
+	}
+	
+	public long getDataSegmentLength() {
+		return (this.file.length() - headerLength);
 	}
 	
 	/**

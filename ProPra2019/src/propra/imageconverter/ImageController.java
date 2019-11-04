@@ -1,6 +1,7 @@
 package propra.imageconverter;
 
-import java.io.File;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -12,6 +13,7 @@ import java.io.IOException;
 public class ImageController {
 	private Image inputImage;
 	private Image outputImage;
+	private final int BUFFERSIZE = 8 * 1024;
 	
 	/**
 	 * Creates a new <code>ImageController</code>.
@@ -52,30 +54,47 @@ public class ImageController {
 	public void convert() throws ImageHandlingException {
 		String inputExtension = inputImage.getExtension();
 		String outputExtension = outputImage.getExtension();
-		byte[] inputDatasegment = inputImage.getDataSegment();
-		byte[] outputDatasegment;
+		byte[] inputDatasegment = new byte[BUFFERSIZE];
+		byte[] outputDatasegment = new byte[BUFFERSIZE];
+		BufferedInputStream buffI = null;
+		FileOutputStream oStream = null;
+		int bytesRead = 0;
+		int bytesReadOld = outputImage.getHeaderLength();
+		
+		try {
+			buffI = new BufferedInputStream(
+					new FileInputStream(inputImage.getFile()), BUFFERSIZE);
+			oStream = new FileOutputStream(outputImage.getFile());
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();				
+		}
+		
 		
 		if (!inputExtension.equals(outputExtension)) {
-			// Either tga>propra or propra>tga
-			outputDatasegment = new byte[inputDatasegment.length];
-			
-			
-			// Change the order of the pixels of input image.
-			// propra: GBR --> tga: BGR			 
-			for (int i = 0; i < inputDatasegment.length; i = i + 3) {
-				outputDatasegment[i] = inputDatasegment[i + 1];
-				outputDatasegment[i + 1] = inputDatasegment[i];
-				outputDatasegment[i + 2] = inputDatasegment[i + 2];
-			}
+			// Either tga>propra or propra>tga			
+			try {				
+				while((bytesRead = buffI.read(inputDatasegment)) != -1) {
+					// Change the order of the pixels of input image.
+					// propra: GBR --> tga: BGR			 
+					for (int i = bytesReadOld; i < bytesRead - 3; i = i + 3) {
+						outputDatasegment[i] = inputDatasegment[i + 1];
+						outputDatasegment[i + 1] = inputDatasegment[i];
+						outputDatasegment[i + 2] = inputDatasegment[i + 2];
+					}
+					bytesReadOld = bytesRead;
+					oStream.write(outputDatasegment);
+				}
+				buffI.close();
+				oStream.close();
+			} catch (IOException e) {
+				throw new ImageHandlingException("Error writing output file.", ErrorCodes.IO_ERROR);
+			}			
 		} else {
 			// tga>tga or propra>propra
 			outputDatasegment = inputDatasegment;
 		}
-		outputImage.setImage(inputImage.getWidth(), inputImage.getHeight(), outputDatasegment);
-		
-		/*
-		 * Create output file and write into the file.
-		 */
+		/*outputImage.setImage(inputImage.getWidth(), inputImage.getHeight(), outputDatasegment);
 		File outputFile = new File(outputImage.getPath());
 		String errorMessage;
 		try (FileOutputStream stream = new FileOutputStream(outputFile.getPath())) {
@@ -86,7 +105,7 @@ public class ImageController {
 		} catch (IOException e) {
 			errorMessage = "Error writing output file. Invalid path or user does not have enough rights.";
 			throw new ImageHandlingException(errorMessage, ErrorCodes.IO_ERROR);
-		}		
+		}	*/	
 		System.out.println("Input image successfully converted.");
 		System.out.println(inputImage.getPath() + " --> " + outputImage.getPath());
 	}
