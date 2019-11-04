@@ -45,6 +45,7 @@ public class ImageController {
 					ErrorCodes.INVALID_FILEFORMAT);
 		}
 		outputImage.setPath(outputPath);
+		outputImage.setDimensions(inputImage.getWidth(), inputImage.getHeight());
 	}
 	
 	/**
@@ -54,12 +55,12 @@ public class ImageController {
 	public void convert() throws ImageHandlingException {
 		String inputExtension = inputImage.getExtension();
 		String outputExtension = outputImage.getExtension();
-		byte[] inputDatasegment = new byte[BUFFERSIZE];
-		byte[] outputDatasegment = new byte[BUFFERSIZE];
+				
 		BufferedInputStream buffI = null;
 		FileOutputStream oStream = null;
 		int bytesRead = 0;
-		int bytesReadOld = outputImage.getHeaderLength();
+		boolean ignoreHeader = true;
+		int offset = inputImage.getHeaderLength();
 		
 		try {
 			buffI = new BufferedInputStream(
@@ -73,16 +74,19 @@ public class ImageController {
 		
 		if (!inputExtension.equals(outputExtension)) {
 			// Either tga>propra or propra>tga			
-			try {				
-				while((bytesRead = buffI.read(inputDatasegment)) != -1) {
+			try {
+				oStream.write(outputImage.getData());
+				byte[] inputDatasegment = new byte[BUFFERSIZE];				
+				buffI.skip(inputImage.getHeaderLength());				
+				while((bytesRead = buffI.read(inputDatasegment)) != -1) {					
 					// Change the order of the pixels of input image.
-					// propra: GBR --> tga: BGR			 
-					for (int i = bytesReadOld; i < bytesRead - 3; i = i + 3) {
+					// propra: GBR --> tga: BGR					
+					byte[] outputDatasegment = new byte[bytesRead];
+					for (int i = 0; i < bytesRead - 3; i = i + 3) {
 						outputDatasegment[i] = inputDatasegment[i + 1];
 						outputDatasegment[i + 1] = inputDatasegment[i];
 						outputDatasegment[i + 2] = inputDatasegment[i + 2];
 					}
-					bytesReadOld = bytesRead;
 					oStream.write(outputDatasegment);
 				}
 				buffI.close();
@@ -92,7 +96,7 @@ public class ImageController {
 			}			
 		} else {
 			// tga>tga or propra>propra
-			outputDatasegment = inputDatasegment;
+			//outputDatasegment = inputDatasegment;
 		}
 		/*outputImage.setImage(inputImage.getWidth(), inputImage.getHeight(), outputDatasegment);
 		File outputFile = new File(outputImage.getPath());

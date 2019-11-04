@@ -87,13 +87,10 @@ public abstract class Image {
 		return tmp;
 	}
 	
-	public void setWidth(int width) throws ImageHandlingException {
+	public void setDimensions(int width, int height) throws ImageHandlingException {
 		this.width = width;
-		setWidthInHeader();
-	}
-	
-	public void setHeight(int height) throws ImageHandlingException {
 		this.height = height;
+		setWidthInHeader();
 		setHeightInHeader();
 	}
 	
