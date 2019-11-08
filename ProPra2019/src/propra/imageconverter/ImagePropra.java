@@ -1,5 +1,7 @@
 package propra.imageconverter;
 
+import java.io.File;
+
 public class ImagePropra extends Image {
 	private final String HEADER_TEXT = "ProPraWS19";
 
@@ -11,17 +13,8 @@ public class ImagePropra extends Image {
 	 * @throws ImageHandlingException an exception is thrown when this <code>ImagePropra</code> could not be created out of
 	 * the file.
 	 */
-	public ImagePropra(String filePath) throws ImageHandlingException {
-		super(filePath);
-	}
-	
-	/**
-	 * Creates a new <code>ImagePropra</code> for a not yet existing propra image file.
-	 * Use this constructor for not yet existing propra image files (such as output propra image files before
-	 * a conversion took place).
-	 */
-	public ImagePropra() {
-		super();
+	public ImagePropra(File file, boolean imageType) throws ImageHandlingException {
+		super(file, imageType);
 	}
 
 	@Override
@@ -35,30 +28,26 @@ public class ImagePropra extends Image {
 	@Override
 	protected void checkHeader() throws ImageHandlingException {
 		
-		// Check if compression type is valid.
-		String hexTmp;
-		hexTmp = String.format("%02x", imageData[15]);
-		if (compressionType != Integer.parseInt(hexTmp, 16)) {
-			throw new ImageHandlingException("Invalid compression of source file.", ErrorCodes.INVALID_HEADERDATA);
+		// Check if compression type is valid.		
+		if (compressionType != header[15]) {
+			throw new ImageHandlingException(
+					"Invalid compression of source file.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
-		// Get source image dimensions from header.
-		hexTmp = String.format("%02x", imageData[11]) + String.format("%02x", imageData[10]);
-		width = Integer.parseInt(hexTmp, 16);
-		hexTmp = String.format("%02x", imageData[13]) + String.format("%02x", imageData[12]);
-		height = Integer.parseInt(hexTmp, 16);
+		// Get source image dimensions from header.		
+		width = (header[11] << 8) + header[10];		
+		height = (header[13] << 8) + header[12];
 
-		// Check if one dimension is zero.
-		String errorMessage;
-		if (width <= 0 || height <= 0) {
-			errorMessage = "Source file corrupt. Invalid image dimensions.";
-			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_HEADERDATA);
+		// Check if one dimension is zero.		
+		if (width <= 0 || height <= 0) {			
+			throw new ImageHandlingException(
+					"Source file corrupt. Invalid image dimensions.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
-		// Check if actual image data length fits to dimensions given in the header.
-		if (imageData.length - headerLength != height * width * 3) {
-			errorMessage = "Source file corrupt. Image data length does not fit to header information.";
-			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_HEADERDATA);
+		// Check if actual image data length fits to dimensions given in the header.		
+		if (file.length() - headerLength != height * width * 3) {			
+			throw new ImageHandlingException(
+					"Source file corrupt. Image data length does not fit to header information.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
 		/*
@@ -66,104 +55,91 @@ public class ImagePropra extends Image {
 		 * are valid.
 		 */
 		// Get the size of the data segment
-		hexTmp = "";
-		for (int i = 0; i < 8; i++) {
-			hexTmp += String.format("%02x", imageData[23 - i]);
-		}
-
+		long dataLength = 
+				header[16] + 
+				(header[17] << 8) + 
+				(header[18] << 16) + 
+				(header[19] << 24) + 
+				(header[20] << 32) + 
+				(header[21] << 40) + 
+				(header[22] << 48) + 
+				(header[23] << 56);
 		// Compare the size of the data segment with the image dimensions
-		int dataLength;
-		dataLength = Integer.parseInt(hexTmp, 16);
-		if (dataLength != width * height * 3) {
-			errorMessage = "Source file corrupt. Invalid image size information in header.";
-			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_HEADERDATA);
+		if (dataLength != width * height * 3) {			
+			throw new ImageHandlingException(
+					"Source file corrupt. Invalid image size information in header.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
 		/*
 		 * Check if length of data segment from header and actual length of data segment
 		 * are equal.
 		 */
-		if (dataLength != imageData.length - headerLength) {
-			errorMessage = "Source file corrupt. Invalid image data length information in header.";
-			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_HEADERDATA);
+		if (dataLength != file.length() - headerLength) {			
+			throw new ImageHandlingException(
+					"Source file corrupt. Invalid image data length information in header.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
 		/*
 		 * Check for valid checksum.
 		 */
-		// Get the check sum from header
-		hexTmp = "";
+		// Compare the actual checksum with the checksum from the header		
+		byte[] checkSum = ImageHelper.getCheckSum(file, headerLength);
 		for (int i = 0; i < 4; i++) {
-			hexTmp += String.format("%02x", imageData[27 - i]);
-		}
-
-		// Compare the actual checksum with the checksum from the header
-		if (!hexTmp.equals(ImageHelper.getCheckSum(this.getDataSegment()))) {
-			errorMessage = "Source file corrupt. Invalid check sum.";
-			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_CHECKSUM);
+			if ((checkSum[i] & 0xFF) != header[24 + i]) {
+				throw new ImageHandlingException(
+						"Source file corrupt. Invalid check sum.", ErrorCodes.INVALID_CHECKSUM);
+			}
 		}
 	}
 
 	@Override
-	protected void setWidthInHeader() throws ImageHandlingException {
-		byte[] widthInBytes = ImageHelper.hexStringToByteArray(Integer.toHexString(width));
-		try {
-			imageData[10] = widthInBytes[1];
-			imageData[11] = widthInBytes[0];
-		} catch (ArrayIndexOutOfBoundsException e) {
-			throw new ImageHandlingException("Invalid header data.", 
-					ErrorCodes.INVALID_HEADERDATA);
-		}
-		
-		
+	protected void setWidth(int width) {
+		header[10] = (byte) width;
+		header[11] = (byte) (width >> 8);
 	}
 
 	@Override
-	protected void setHeightInHeader() throws ImageHandlingException {
-		byte[] widthInBytes = ImageHelper.hexStringToByteArray(Integer.toHexString(height));
-		try {
-			imageData[12] = widthInBytes[1];
-			imageData[13] = widthInBytes[0];
-		} catch (ArrayIndexOutOfBoundsException e) {
-			throw new ImageHandlingException("Invalid header data.", 
-					ErrorCodes.INVALID_HEADERDATA);
-		}		
+	protected void setHeight(int height) {
+		header[12] = (byte) height;
+		header[13] = (byte) (height >> 8);
 	}
 
 	@Override
 	protected void createHeader() {
-		imageData = new byte[headerLength];
+		header = new int[headerLength];		
 		byte[] proPraBytes = HEADER_TEXT.getBytes();
 		for (int i = 0; i < HEADER_TEXT.length(); i++) {
-			imageData[i] = proPraBytes[i];
+			header[i] = proPraBytes[i];
 		}
 
-		imageData[14] = bitsPerPixel;
-		imageData[15] = compressionType;
+		header[14] = bitsPerPixel;
+		header[15] = compressionType;
 	}
-
+	
 	@Override
-	public void setImage(int width, int height, byte[] dataSegment) throws ImageHandlingException {
-		super.setImage(width, height, dataSegment);
-
+	public void prepareConversion(Image inputImage) throws ImageHandlingException {
+		super.prepareConversion(inputImage);
+		
 		/*
 		 * Write the length of the data segment into the header (little-endian).
-		 */
-		String dataSegmentString = Integer.toHexString(imageData.length - headerLength);
-		byte[] dataSegmentBytes = ImageHelper.hexStringToByteArray(dataSegmentString);
-		for (int i = 0; i < dataSegmentBytes.length; i++) {
-			imageData[16 + i] = dataSegmentBytes[dataSegmentBytes.length - 1 - i];
-		}
+		 */		
+		int sizeOfDataSegment = inputImage.getWidth() * inputImage.getHeight();		
+		header[16] = (byte) sizeOfDataSegment;
+		header[17] = (byte) (sizeOfDataSegment >> 8);
+		header[18] = (byte) (sizeOfDataSegment >> 16);
+		header[19] = (byte) (sizeOfDataSegment >> 24);
+		header[20] = (byte) (sizeOfDataSegment >> 32);
+		header[21] = (byte) (sizeOfDataSegment >> 40);
+		header[22] = (byte) (sizeOfDataSegment >> 48);
+		header[23] = (byte) (sizeOfDataSegment >> 56);		
 
 		/*
 		 * Write check sum into the header (little-endian).
 		 */
-		String checkSum = ImageHelper.getCheckSum(this.getDataSegment());
-		byte[] checkSumBytes = ImageHelper.hexStringToByteArray(checkSum);
-		for (int i = 0; i < checkSumBytes.length; i++) {
-			imageData[24 + i] = checkSumBytes[checkSumBytes.length - 1 - i];
+		byte[] checkSum = ImageHelper.getCheckSum(inputImage.getFile(), headerLength);		
+		for (int i = 0; i < checkSum.length; i++) {
+			header[24 + i] = checkSum[i];
 		}
-
 	}
 
 }

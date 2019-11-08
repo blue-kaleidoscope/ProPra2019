@@ -1,5 +1,7 @@
 package propra.imageconverter;
 
+import java.io.File;
+
 /**
  * Converts images from a given input file path to a desired output file path.
  * Expects two arguments specified as
@@ -23,8 +25,16 @@ public class ImageConverter {
 		String inputPath = args[0].replace("--input=", "");
 		String outputPath = args[1].replace("--output=", "");
 
+		File inputImage = new File(inputPath);
+		File outputImage = new File(outputPath);
+		
+		if (!inputImage.exists()) {
+			System.out.println(" Invalid file paths given for input or output image.");
+			System.out.println(" +++ Shutting down ImageConverter +++");
+			System.exit(123);
+		}
 		try {
-			ImageController controller = new ImageController(inputPath, outputPath);
+			ImageController controller = new ImageController(inputImage, outputImage);
 			controller.convert();
 		} catch (ImageHandlingException e) {
 			System.err.println(e.getMessage());

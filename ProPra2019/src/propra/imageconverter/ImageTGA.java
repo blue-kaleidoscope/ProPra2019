@@ -1,5 +1,7 @@
 package propra.imageconverter;
 
+import java.io.File;
+
 public class ImageTGA extends Image {
 	private byte origin;
 	
@@ -11,20 +13,9 @@ public class ImageTGA extends Image {
 	 * @throws ImageHandlingException an exception is thrown when this <code>ImageTGA</code> could not be created out of
 	 * the file.
 	 */
-	public ImageTGA(String filepath) throws ImageHandlingException {
-		super(filepath);
-	}
-	
-	/**
-	 * Creates a new <code>ImageTGA</code> for a not yet existing tga image file.
-	 * Use this constructor for not yet existing tga image files (such as output tga image files before
-	 * a conversion took place).
-	 */
-	public ImageTGA() {
-		super();
-	}
-
-	
+	public ImageTGA(File file, boolean imageType) throws ImageHandlingException {
+		super(file, imageType);
+	}	
 
 	@Override
 	protected void setProperties() {
@@ -39,18 +30,14 @@ public class ImageTGA extends Image {
 	protected void checkHeader() throws ImageHandlingException {		
 
 		// Check if compression type is valid.
-		String hexTmp;
-		hexTmp = String.format("%02x", imageData[2]);
-		if (compressionType != Integer.parseInt(hexTmp, 16)) {			
+		if (compressionType != header[2]) {			
 			throw new ImageHandlingException("Invalid compression of source file.", 
 					ErrorCodes.INVALID_HEADERDATA);
 		}
 
-		// Get source image dimensions from header.
-		hexTmp = String.format("%02x", imageData[13]) + String.format("%02x", imageData[12]);
-		width = Integer.parseInt(hexTmp, 16);
-		hexTmp = String.format("%02x", imageData[15]) + String.format("%02x", imageData[14]);
-		height = Integer.parseInt(hexTmp, 16);
+		// Get source image dimensions from header.		
+		width = (header[13] << 8) + header[12];		
+		height = (header[15] << 8) + header[14];
 
 		// Check if one dimension is zero.
 		String errorMessage;
@@ -60,7 +47,7 @@ public class ImageTGA extends Image {
 		}
 
 		// Check if actual image data length fits to dimensions given in the header.
-		if (imageData.length - headerLength != height * width * 3) {
+		if (file.length() - headerLength != height * width * 3) {
 			errorMessage = "Source file corrupt. Image data length does not fit to header information.";
 			throw new ImageHandlingException(errorMessage, ErrorCodes.INVALID_HEADERDATA);
 		}
@@ -68,39 +55,22 @@ public class ImageTGA extends Image {
 	}
 
 	@Override
-	protected void setWidthInHeader() throws ImageHandlingException {		
-		byte[] widthInBytes = ImageHelper.hexStringToByteArray(
-				Integer.toHexString(width));
-		try {
-			imageData[12] = widthInBytes[1];
-			imageData[13] = widthInBytes[0];
-		} catch (ArrayIndexOutOfBoundsException e) {
-			throw new ImageHandlingException("Invalid header data.", 
-					ErrorCodes.INVALID_HEADERDATA);
-		}
-		
+	protected void setWidth(int width) {		
+		header[12] = (byte) width;
+		header[13] = (byte) (width >> 8);		
 	}
 
 	@Override
-	protected void setHeightInHeader() throws ImageHandlingException {		
-		byte[] widthInBytes = ImageHelper.hexStringToByteArray(
-				Integer.toHexString(height));
-		try {
-			imageData[14] = widthInBytes[1];
-			imageData[15] = widthInBytes[0];
-		} catch (ArrayIndexOutOfBoundsException e) {
-			throw new ImageHandlingException("Invalid header data.", 
-					ErrorCodes.INVALID_HEADERDATA);
-		}
-		
-				
+	protected void setHeight(int height) {		
+		header[14] = (byte) height;
+		header[15] = (byte) (height >> 8);
 	}
 	
 	@Override
 	protected void createHeader() {
-		imageData = new byte[headerLength];
-		imageData[2] = compressionType; // uncompressed RGB
-		imageData[16] = bitsPerPixel;
-		imageData[17] = origin;
+		header = new int[headerLength];
+		header[2] = compressionType; // uncompressed RGB
+		header[16] = bitsPerPixel;
+		header[17] = origin;
 	}
 }
