@@ -123,7 +123,7 @@ public class ImagePropra extends Image {
 		/*
 		 * Write the length of the data segment into the header (little-endian).
 		 */		
-		int sizeOfDataSegment = inputImage.getWidth() * inputImage.getHeight();		
+		long sizeOfDataSegment = inputImage.getWidth() * inputImage.getHeight() * 3;		
 		header[16] = (byte) sizeOfDataSegment;
 		header[17] = (byte) (sizeOfDataSegment >> 8);
 		header[18] = (byte) (sizeOfDataSegment >> 16);

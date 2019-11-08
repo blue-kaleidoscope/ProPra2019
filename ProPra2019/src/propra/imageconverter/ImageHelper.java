@@ -50,6 +50,8 @@ public class ImageHelper {
 		}
 		
 		int checkSum = a_i * (int) Math.pow(2, 16) + b_i;
+		String tmp = Integer.toHexString(checkSum);
+		byte[] tmpArray = tmp.getBytes();
 		byte[] checkSumArray = new byte[4];
 		checkSumArray[0] = (byte) checkSum;
 		checkSumArray[1] = (byte) (checkSum >> 8);
