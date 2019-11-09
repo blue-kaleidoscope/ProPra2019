@@ -14,7 +14,14 @@ import java.io.IOException;
 public class ImageHelper {
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException {
-		System.out.println(getCheckSum(new FileInputStream(new File("origin\\test_01_uncompressed.tga")).readAllBytes()));
+		FileInputStream fis = new FileInputStream(new File("origin\\test_01_uncompressed.tga"));
+		byte[] image = fis.readAllBytes();
+		fis.close();
+		int header = 18;
+		byte[] tmp = new byte[image.length - header];
+		System.arraycopy(image, 18, tmp, 
+				0, image.length - header);
+		System.out.println(getCheckSum(tmp));
 	}
 	
 	/**
@@ -69,12 +76,9 @@ public class ImageHelper {
 	 * @param data the image data.
 	 * @return the check sum.
 	 */
-	public static String getCheckSum(byte[] data) {
-		byte[] tmp = new byte[data.length - 18];
-		System.arraycopy(data, 18, tmp, 
-				0, data.length - 18);
+	public static String getCheckSum(byte[] data) {	
 		
-		if (tmp == null) {
+		if (data == null) {
 			throw new IllegalArgumentException();			
 		}
 		
@@ -82,8 +86,8 @@ public class ImageHelper {
 		int a_i = 0; // initial sum
 		int b_i = 1; // initial b_0
 
-		for (int i = 0; i < tmp.length; i++) {
-			a_i += (i + 1) + Byte.toUnsignedInt(tmp[i]);
+		for (int i = 0; i < data.length; i++) {
+			a_i += (i + 1) + Byte.toUnsignedInt(data[i]);
 			a_i %= x;
 			b_i = (b_i % x + a_i) % x;
 		}
