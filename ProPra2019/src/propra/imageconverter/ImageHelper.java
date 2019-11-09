@@ -3,6 +3,7 @@ package propra.imageconverter;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /**
@@ -12,7 +13,9 @@ import java.io.IOException;
  */
 public class ImageHelper {
 	
-
+	public static void main(String[] args) throws FileNotFoundException, IOException {
+		System.out.println(getCheckSum(new FileInputStream(new File("origin\\test_01_uncompressed.tga")).readAllBytes()));
+	}
 	
 	/**
 	 * Calculates the check sum of image data based on the PROPRA file specification V1.0.
@@ -60,6 +63,32 @@ public class ImageHelper {
 		
 		return checkSumArray;
 	}	
+	
+	/**
+	 * Calculates the check sum of image data based on the PROPRA file specification V1.0.
+	 * @param data the image data.
+	 * @return the check sum.
+	 */
+	public static String getCheckSum(byte[] data) {
+		byte[] tmp = new byte[data.length - 18];
+		System.arraycopy(data, 18, tmp, 
+				0, data.length - 18);
+		
+		if (tmp == null) {
+			throw new IllegalArgumentException();			
+		}
+		
+		int x = 65513;
+		int a_i = 0; // initial sum
+		int b_i = 1; // initial b_0
+
+		for (int i = 0; i < tmp.length; i++) {
+			a_i += (i + 1) + Byte.toUnsignedInt(tmp[i]);
+			a_i %= x;
+			b_i = (b_i % x + a_i) % x;
+		}
+		return Integer.toHexString(a_i * (int) Math.pow(2, 16) + b_i);
+	}
 	
 	/**
 	 * To extract the file extension of a given file path.
