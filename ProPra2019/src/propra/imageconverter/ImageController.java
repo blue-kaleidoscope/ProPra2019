@@ -39,7 +39,7 @@ public class ImageController {
 			throw new ImageHandlingException("Unknown output file format: " + outputExtension, 
 					ErrorCodes.INVALID_FILEFORMAT);
 		}
-		outputImage.setDimensions(inputImage.getWidth(), inputImage.getHeight());
+		outputImage.prepareConversion(inputImage.getWidth(), inputImage.getHeight(), inputImage);
 	}
 	
 	/**
@@ -50,7 +50,6 @@ public class ImageController {
 		if (!inputImage.getExtension().equals(outputImage.getExtension())) {
 			// Either tga>propra or propra>tga
 			ImageHelper.convert(inputImage, outputImage, false);
-			outputImage.finalizeConversion();
 		} else {
 			// tga>tga or propra>propra TODO
 			//outputDatasegment = inputDatasegment;

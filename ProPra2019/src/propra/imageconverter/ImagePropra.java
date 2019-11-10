@@ -107,8 +107,8 @@ public class ImagePropra extends Image {
 	}
 	
 	@Override
-	public void setDimensions(int width, int height) throws ImageHandlingException {
-		super.setDimensions(width, height);
+	public void prepareConversion(int width, int height, Image inputImage) throws ImageHandlingException {
+		super.prepareConversion(width, height, inputImage);
 		
 		/*
 		 * Write the length of the data segment into the header (little-endian).
@@ -121,19 +121,14 @@ public class ImagePropra extends Image {
 		header[20] = (byte) (sizeOfDataSegment >> 32);
 		header[21] = (byte) (sizeOfDataSegment >> 40);
 		header[22] = (byte) (sizeOfDataSegment >> 48);
-		header[23] = (byte) (sizeOfDataSegment >> 56);	
-	}
-	
-	@Override
-	public void finalizeConversion() throws ImageHandlingException {		
+		header[23] = (byte) (sizeOfDataSegment >> 56);
+		
 		/*
 		 * Write check sum into the header (little-endian).
 		 */
-		byte[] checkSum = ImageHelper.getCheckSum(this.getFile(), headerLength);		
+		byte[] checkSum = ImageHelper.getCheckSum(inputImage.getFile(), headerLength);		
 		for (int i = 0; i < checkSum.length; i++) {
 			header[24 + i] = checkSum[i];
 		}
-		super.finalizeConversion();
 	}
-
 }

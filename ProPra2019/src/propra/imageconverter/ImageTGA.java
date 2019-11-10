@@ -66,9 +66,4 @@ public class ImageTGA extends Image {
 	protected void createHeader() {		
 		header[headerOrigin] = origin;
 	}
-
-	@Override
-	public void finalizeConversion() throws ImageHandlingException {
-		// Currently nothing to do here for TGA		
-	}
 }

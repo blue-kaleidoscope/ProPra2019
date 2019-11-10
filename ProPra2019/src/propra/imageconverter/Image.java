@@ -94,7 +94,7 @@ public abstract class Image {
 		return (this.file.length() - headerLength);
 	}
 	
-	public void setDimensions(int width, int height) throws ImageHandlingException {
+	public void prepareConversion(int width, int height, Image inputImage) throws ImageHandlingException {
 		if (imageType != OUTPUT_IMAGE) {
 			throw new ImageHandlingException(
 					"Method should not be called for input images. Only output images possible.", ErrorCodes.IO_ERROR);
@@ -104,28 +104,6 @@ public abstract class Image {
 		
 		header[headerHeight] = (byte) height;
 		header[headerHeight + 1] = (byte) (height >> 8);
-	}
-	
-	public void finalizeConversion() throws ImageHandlingException {
-		FileOutputStream oStream = null;
-		try {
-			oStream = new FileOutputStream(file, false);
-		} catch (FileNotFoundException e) {
-			throw new ImageHandlingException("Error accessing output file.", ErrorCodes.IO_ERROR);
-		}		
-		
-		byte[] byteHeader = new byte[header.length];
-		for (int i = 0; i < byteHeader.length; i++) {
-			byteHeader[i] = (byte) header[i];
-		}
-		
-		try {
-			oStream.write(byteHeader);
-			oStream.close();
-		} catch (IOException e) {
-			throw new ImageHandlingException("Error writing output file.", ErrorCodes.IO_ERROR);
-		}
-		
 	}
 	
 	/**

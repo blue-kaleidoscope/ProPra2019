@@ -39,6 +39,7 @@ public class ImageHelper {
 			buffI = new BufferedInputStream(new FileInputStream(file), bufferSize);
 			buffI.skip(offset);
 			while ((bytesRead = buffI.read(buffArray)) != -1) {
+				buffArray = convertRGB(buffArray);
 				for (int i = 0; i < bytesRead; i++) {
 					a_i += (i + bytesInTotal + 1) + Byte.toUnsignedInt(buffArray[i]);
 					a_i %= x;
@@ -143,34 +144,40 @@ public class ImageHelper {
 			e.printStackTrace();
 		}
 
+		int[] header = outputImage.getHeader();
+		byte[] byteHeader = new byte[header.length];
+		for (int i = 0; i < byteHeader.length; i++) {
+			byteHeader[i] = (byte) header[i];
+		}
+
 		try {
+			oStream.write(byteHeader);
 			byte[] inputDatasegment = new byte[buffersize];
-			buffI.skip(inputImage.getHeaderLength());			
+			buffI.skip(inputImage.getHeaderLength());
 			while ((bytesRead = buffI.read(inputDatasegment)) != -1) {
 				byte[] outputDatasegment = new byte[bytesRead];
 				if (compress) {
 					outputDatasegment = compress(inputDatasegment, outputDatasegment, buffersize);
 				} else {
-					outputDatasegment = convertRGB(inputDatasegment, outputDatasegment);
+					outputDatasegment = convertRGB(inputDatasegment);
 				}
 				oStream.write(outputDatasegment);
-			}			
+			}
 			buffI.close();
 			oStream.close();
 		} catch (IOException e) {
 			throw new ImageHandlingException("Error writing output file.", ErrorCodes.IO_ERROR);
 		}
 	}
-	
-	private static byte[] compress(byte[] inputDatasegment, byte[] outputDatasegment, int len) {		
+
+	private static byte[] compress(byte[] inputDatasegment, byte[] outputDatasegment, int len) {
 		int indexOutput = 0;
 		int equalPixels = 0;
 		int unequalPixels = 0;
 
 		// Compressed
 		for (int i = 0; i < inputDatasegment.length - 6; i = i + 3) {
-			if (((i + 1) % len == 0 && i > 0) || equalPixels == 127
-					|| unequalPixels == 128) {
+			if (((i + 1) % len == 0 && i > 0) || equalPixels == 127 || unequalPixels == 128) {
 				if (equalPixels > 0) {
 					outputDatasegment[indexOutput++] = (byte) (0x80 + equalPixels);
 					outputDatasegment[indexOutput++] = inputDatasegment[i];
@@ -186,8 +193,7 @@ public class ImageHelper {
 					}
 				}
 			} else {
-				if (inputDatasegment[i] == inputDatasegment[i + 4]
-						&& inputDatasegment[i + 1] == inputDatasegment[i + 5]
+				if (inputDatasegment[i] == inputDatasegment[i + 4] && inputDatasegment[i + 1] == inputDatasegment[i + 5]
 						&& inputDatasegment[i + 2] == inputDatasegment[i + 6]) {
 					equalPixels++;
 					if (unequalPixels > 0) {
@@ -215,11 +221,12 @@ public class ImageHelper {
 		}
 		return outputDatasegment;
 	}
-	
-	private static byte[] convertRGB(byte[] inputDatasegment, byte[] outputDatasegment) {
+
+	private static byte[] convertRGB(byte[] inputDatasegment) {
 		// Change the order of the pixels of input image.
 		// propra: GBR --> tga: BGR
-		for (int i = 0; i < inputDatasegment.length; i = i + 3) {
+		byte[] outputDatasegment = new byte[inputDatasegment.length];
+		for (int i = 0; i < inputDatasegment.length - 3; i = i + 3) {
 			outputDatasegment[i] = inputDatasegment[i + 1];
 			outputDatasegment[i + 1] = inputDatasegment[i];
 			outputDatasegment[i + 2] = inputDatasegment[i + 2];
