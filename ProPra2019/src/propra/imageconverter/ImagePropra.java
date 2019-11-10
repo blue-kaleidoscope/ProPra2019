@@ -88,7 +88,7 @@ public class ImagePropra extends Image {
 		 * Check for valid checksum.
 		 */
 		// Compare the actual checksum with the checksum from the header		
-		byte[] checkSum = ImageHelper.getCheckSum(file, headerLength);
+		byte[] checkSum = ImageHelper.getCheckSum(this, headerLength);
 		for (int i = 0; i < 4; i++) {
 			if ((checkSum[i] & 0xFF) != header[24 + i]) {
 				throw new ImageHandlingException(
@@ -126,7 +126,7 @@ public class ImagePropra extends Image {
 		/*
 		 * Write check sum into the header (little-endian).
 		 */
-		byte[] checkSum = ImageHelper.getCheckSum(inputImage.getFile(), inputImage.getHeaderLength());		
+		byte[] checkSum = ImageHelper.getCheckSum(inputImage, inputImage.getHeaderLength());		
 		for (int i = 0; i < checkSum.length; i++) {
 			header[24 + i] = checkSum[i];
 		}

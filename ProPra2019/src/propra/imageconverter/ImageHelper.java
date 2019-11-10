@@ -23,8 +23,9 @@ public class ImageHelper {
 	 * @param TODO params
 	 * @return the check sum.
 	 */
-	public static byte[] getCheckSum(File file, int offset) {
+	public static byte[] getCheckSum(Image image, int offset) {
 		BufferedInputStream buffI = null;
+		File file = image.getFile();
 		// int bufferSize = 8 * 1024;
 		//int bufferSize = 65513;
 		int bufferSize = 9 * 1024;
@@ -40,7 +41,9 @@ public class ImageHelper {
 			buffI = new BufferedInputStream(new FileInputStream(file), bufferSize);
 			buffI.skip(offset);
 			while ((bytesRead = buffI.read(buffArray)) != -1) {
-				buffArray = convertRGB(buffArray);
+				if(image.getExtension().equals("tga")) {
+					buffArray = convertRGB(buffArray);
+				}				
 				for (int i = 0; i < bytesRead; i++) {
 					a_i += (i + bytesInTotal + 1) + Byte.toUnsignedInt(buffArray[i]);
 					a_i %= x;

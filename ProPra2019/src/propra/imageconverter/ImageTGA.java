@@ -63,7 +63,8 @@ public class ImageTGA extends Image {
 	}
 	
 	@Override
-	protected void createHeader() {		
+	protected void createHeader() {
+		super.createHeader();
 		header[headerOrigin] = origin;
 	}
 }
