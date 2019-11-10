@@ -1,11 +1,6 @@
 package propra.imageconverter;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 /**
  * This class controls the conversion process using an input and an output image.
  * @author Oliver Eckstein
@@ -14,7 +9,6 @@ import java.io.IOException;
 public class ImageController {
 	private Image inputImage;
 	private Image outputImage;
-	private final int BUFFERSIZE = 9 * 1024;
 	
 	/**
 	 * Creates a new <code>ImageController</code>.
@@ -44,58 +38,21 @@ public class ImageController {
 		} else {
 			throw new ImageHandlingException("Unknown output file format: " + outputExtension, 
 					ErrorCodes.INVALID_FILEFORMAT);
-		}		
-		outputImage.prepareConversion(inputImage);
+		}
+		outputImage.setDimensions(inputImage.getWidth(), inputImage.getHeight());
 	}
 	
 	/**
 	 * To start the conversion process from the input image of this controller to the output image.
 	 * @throws ImageHandlingException An exception is thrown when the conversion cannot be performed.
 	 */
-	public void convert() throws ImageHandlingException {				
-		BufferedInputStream buffI = null;
-		FileOutputStream oStream = null;
-		int bytesRead = 0;
-		
-		try {
-			buffI = new BufferedInputStream(
-					new FileInputStream(inputImage.getFile()), BUFFERSIZE);
-			oStream = new FileOutputStream(outputImage.getFile());
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();				
-		}
-		
-		
+	public void convert() throws ImageHandlingException {
 		if (!inputImage.getExtension().equals(outputImage.getExtension())) {
-			// Either tga>propra or propra>tga			
-			int[] intHeader = outputImage.getHeader();
-			byte[] byteHeader = new byte[intHeader.length];
-			for (int i = 0; i < byteHeader.length; i++) {
-				byteHeader[i] = (byte) intHeader[i];
-			}
-			try {
-				oStream.write(byteHeader);
-				byte[] inputDatasegment = new byte[BUFFERSIZE];				
-				buffI.skip(inputImage.getHeaderLength());				
-				while((bytesRead = buffI.read(inputDatasegment)) != -1) {					
-					// Change the order of the pixels of input image.
-					// propra: GBR --> tga: BGR					
-					byte[] outputDatasegment = new byte[bytesRead];
-					for (int i = 0; i < bytesRead; i = i + 3) {
-						outputDatasegment[i] = inputDatasegment[i + 1];
-						outputDatasegment[i + 1] = inputDatasegment[i];
-						outputDatasegment[i + 2] = inputDatasegment[i +2];
-					}
-					oStream.write(outputDatasegment);
-				}
-				buffI.close();
-				oStream.close();
-			} catch (IOException e) {
-				throw new ImageHandlingException("Error writing output file.", ErrorCodes.IO_ERROR);
-			}			
+			// Either tga>propra or propra>tga
+			ImageHelper.convert(inputImage, outputImage, false);
+			outputImage.finalizeConversion();
 		} else {
-			// tga>tga or propra>propra
+			// tga>tga or propra>propra TODO
 			//outputDatasegment = inputDatasegment;
 		}
 		System.out.println("Input image successfully converted.");

@@ -1,6 +1,9 @@
 package propra.imageconverter;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 /**
  * This class describes an image which can be handled by the ImageConverter.
@@ -20,6 +23,11 @@ public abstract class Image {
 	
 	public static final boolean INPUT_IMAGE = true;
 	public static final boolean OUTPUT_IMAGE = false;
+	
+	protected int headerHeight;
+	protected int headerWidth;
+	protected int headerCompression;
+	protected int headerBitsPerPixel;
 	
 	/**
 	 * Creates a new <code>Image</code> for an existing image file according to the <code>filePath</code>.
@@ -62,23 +70,6 @@ public abstract class Image {
 		return this.file.getPath();
 	}
 	
-	/**
-	 * TODO Kommentar erstellen
-	 * @param width
-	 * @param height
-	 * @throws ImageHandlingException
-	 */
-	public void prepareConversion(Image inputImage) throws ImageHandlingException {
-		if (imageType != OUTPUT_IMAGE) {
-			throw new ImageHandlingException(
-					"Conversion cannot be prepared for input images. Only output images possible.", ErrorCodes.IO_ERROR);
-		}
-		this.width = inputImage.getWidth();
-		this.height = inputImage.getHeight();
-		setWidth(width);
-		setHeight(height);
-	}
-	
 	public int getWidth() {
 		return width;
 	}
@@ -103,17 +94,39 @@ public abstract class Image {
 		return (this.file.length() - headerLength);
 	}
 	
-	/**
-	 * To set the width into the header of this <code>Image</code>.
-	 * TODO comment
-	 */
-	protected abstract void setWidth(int width);
+	public void setDimensions(int width, int height) throws ImageHandlingException {
+		if (imageType != OUTPUT_IMAGE) {
+			throw new ImageHandlingException(
+					"Method should not be called for input images. Only output images possible.", ErrorCodes.IO_ERROR);
+		}		
+		header[headerWidth] = (byte) width;
+		header[headerWidth + 1] = (byte) (width >> 8);
+		
+		header[headerHeight] = (byte) height;
+		header[headerHeight + 1] = (byte) (height >> 8);
+	}
 	
-	/**
-	 * To set the height into the header of this <code>Image</code>.
-	 * TODO comment
-	 */
-	protected abstract void setHeight(int height);
+	public void finalizeConversion() throws ImageHandlingException {
+		FileOutputStream oStream = null;
+		try {
+			oStream = new FileOutputStream(file, false);
+		} catch (FileNotFoundException e) {
+			throw new ImageHandlingException("Error accessing output file.", ErrorCodes.IO_ERROR);
+		}		
+		
+		byte[] byteHeader = new byte[header.length];
+		for (int i = 0; i < byteHeader.length; i++) {
+			byteHeader[i] = (byte) header[i];
+		}
+		
+		try {
+			oStream.write(byteHeader);
+			oStream.close();
+		} catch (IOException e) {
+			throw new ImageHandlingException("Error writing output file.", ErrorCodes.IO_ERROR);
+		}
+		
+	}
 	
 	/**
 	 * To define properties which are unique for this type of <code>Image</code>.
@@ -130,6 +143,10 @@ public abstract class Image {
 	/**
 	 * To create a new header of this <code>Image</code> based on the type of the <code>Image</code>.
 	 */
-	protected abstract void createHeader();
+	protected void createHeader() {
+		header = new int[headerLength];
+		header[headerCompression] = compressionType;
+		header[headerBitsPerPixel] = bitsPerPixel;
+	}
 	
 }

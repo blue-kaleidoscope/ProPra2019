@@ -23,6 +23,11 @@ public class ImagePropra extends Image {
 		compressionType = 0; // uncompressed
 		bitsPerPixel = 24;
 		fileExtension = "propra";
+		
+		headerWidth = 10;
+		headerHeight = 12;
+		headerBitsPerPixel = 14;
+		headerCompression = 15;
 	}
 
 	@Override
@@ -35,8 +40,8 @@ public class ImagePropra extends Image {
 		}
 
 		// Get source image dimensions from header.		
-		width = (header[11] << 8) + header[10];		
-		height = (header[13] << 8) + header[12];
+		width = (header[headerWidth + 1] << 8) + header[headerWidth];		
+		height = (header[headerHeight + 1] << 8) + header[headerHeight];
 
 		// Check if one dimension is zero.		
 		if (width <= 0 || height <= 0) {			
@@ -91,39 +96,24 @@ public class ImagePropra extends Image {
 			}
 		}
 	}
-
-	@Override
-	protected void setWidth(int width) {
-		header[10] = (byte) width;
-		header[11] = (byte) (width >> 8);
-	}
-
-	@Override
-	protected void setHeight(int height) {
-		header[12] = (byte) height;
-		header[13] = (byte) (height >> 8);
-	}
-
+	
 	@Override
 	protected void createHeader() {
-		header = new int[headerLength];		
+		super.createHeader();	
 		byte[] proPraBytes = HEADER_TEXT.getBytes();
 		for (int i = 0; i < HEADER_TEXT.length(); i++) {
 			header[i] = proPraBytes[i];
 		}
-
-		header[14] = bitsPerPixel;
-		header[15] = compressionType;
 	}
 	
 	@Override
-	public void prepareConversion(Image inputImage) throws ImageHandlingException {
-		super.prepareConversion(inputImage);
+	public void setDimensions(int width, int height) throws ImageHandlingException {
+		super.setDimensions(width, height);
 		
 		/*
 		 * Write the length of the data segment into the header (little-endian).
 		 */		
-		long sizeOfDataSegment = inputImage.getWidth() * inputImage.getHeight() * 3;		
+		long sizeOfDataSegment = width * height * 3;		
 		header[16] = (byte) sizeOfDataSegment;
 		header[17] = (byte) (sizeOfDataSegment >> 8);
 		header[18] = (byte) (sizeOfDataSegment >> 16);
@@ -131,15 +121,19 @@ public class ImagePropra extends Image {
 		header[20] = (byte) (sizeOfDataSegment >> 32);
 		header[21] = (byte) (sizeOfDataSegment >> 40);
 		header[22] = (byte) (sizeOfDataSegment >> 48);
-		header[23] = (byte) (sizeOfDataSegment >> 56);		
-
+		header[23] = (byte) (sizeOfDataSegment >> 56);	
+	}
+	
+	@Override
+	public void finalizeConversion() throws ImageHandlingException {		
 		/*
 		 * Write check sum into the header (little-endian).
 		 */
-		byte[] checkSum = ImageHelper.getCheckSum(inputImage.getFile(), headerLength);		
+		byte[] checkSum = ImageHelper.getCheckSum(this.getFile(), headerLength);		
 		for (int i = 0; i < checkSum.length; i++) {
 			header[24 + i] = checkSum[i];
 		}
+		super.finalizeConversion();
 	}
 
 }
