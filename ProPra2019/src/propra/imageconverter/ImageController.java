@@ -39,7 +39,7 @@ public class ImageController {
 			throw new ImageHandlingException("Unknown output file format: " + outputExtension, 
 					ErrorCodes.INVALID_FILEFORMAT);
 		}
-		outputImage.prepareConversion(inputImage.getWidth(), inputImage.getHeight(), inputImage);
+		outputImage.prepareConversion(inputImage);
 	}
 	
 	/**

@@ -26,7 +26,8 @@ public class ImageHelper {
 	public static byte[] getCheckSum(File file, int offset) {
 		BufferedInputStream buffI = null;
 		// int bufferSize = 8 * 1024;
-		int bufferSize = 65513;
+		//int bufferSize = 65513;
+		int bufferSize = 9 * 1024;
 		byte[] buffArray = new byte[bufferSize];
 		int bytesRead = 0;
 		int bytesInTotal = 0;
@@ -226,7 +227,7 @@ public class ImageHelper {
 		// Change the order of the pixels of input image.
 		// propra: GBR --> tga: BGR
 		byte[] outputDatasegment = new byte[inputDatasegment.length];
-		for (int i = 0; i < inputDatasegment.length - 3; i = i + 3) {
+		for (int i = 0; i < inputDatasegment.length; i = i + 3) {
 			outputDatasegment[i] = inputDatasegment[i + 1];
 			outputDatasegment[i + 1] = inputDatasegment[i];
 			outputDatasegment[i + 2] = inputDatasegment[i + 2];

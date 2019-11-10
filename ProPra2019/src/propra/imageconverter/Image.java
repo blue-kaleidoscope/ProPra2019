@@ -94,11 +94,14 @@ public abstract class Image {
 		return (this.file.length() - headerLength);
 	}
 	
-	public void prepareConversion(int width, int height, Image inputImage) throws ImageHandlingException {
+	public void prepareConversion(Image inputImage) throws ImageHandlingException {
 		if (imageType != OUTPUT_IMAGE) {
 			throw new ImageHandlingException(
 					"Method should not be called for input images. Only output images possible.", ErrorCodes.IO_ERROR);
-		}		
+		}
+		width = inputImage.getWidth();
+		height = inputImage.getHeight();
+		
 		header[headerWidth] = (byte) width;
 		header[headerWidth + 1] = (byte) (width >> 8);
 		
