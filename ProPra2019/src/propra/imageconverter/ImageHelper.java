@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
 /**
  * A helper class which contains methods supporting the handling of files and
@@ -16,6 +17,8 @@ import java.io.IOException;
  */
 public class ImageHelper {
 
+	private static int tmpIndex = 0;
+
 	/**
 	 * Calculates the check sum of image data based on the PROPRA file specification
 	 * V1.0.
@@ -23,11 +26,8 @@ public class ImageHelper {
 	 * @param TODO params
 	 * @return the check sum.
 	 */
-	public static byte[] getCheckSum(Image image, int offset) {
+	public static byte[] getCheckSum(File file, int offset) {
 		BufferedInputStream buffI = null;
-		File file = image.getFile();
-		// int bufferSize = 8 * 1024;
-		//int bufferSize = 65513;
 		int bufferSize = 9 * 1024;
 		byte[] buffArray = new byte[bufferSize];
 		int bytesRead = 0;
@@ -41,9 +41,6 @@ public class ImageHelper {
 			buffI = new BufferedInputStream(new FileInputStream(file), bufferSize);
 			buffI.skip(offset);
 			while ((bytesRead = buffI.read(buffArray)) != -1) {
-				if(image.getExtension().equals("tga")) {
-					buffArray = convertRGB(buffArray);
-				}				
 				for (int i = 0; i < bytesRead; i++) {
 					a_i += (i + bytesInTotal + 1) + Byte.toUnsignedInt(buffArray[i]);
 					a_i %= x;
@@ -133,7 +130,7 @@ public class ImageHelper {
 	 * @throws ImageHandlingException An exception is thrown when the conversion
 	 *                                cannot be performed.
 	 */
-	public static void convert(Image inputImage, Image outputImage, boolean compress) throws ImageHandlingException {
+	public static void convertTgaPropra(Image inputImage, Image outputImage) throws ImageHandlingException {
 		BufferedInputStream buffI = null;
 		FileOutputStream oStream = null;
 		// int buffersize = 9 * 1024;
@@ -157,13 +154,13 @@ public class ImageHelper {
 		try {
 			oStream.write(byteHeader);
 			byte[] inputDatasegment = new byte[buffersize];
-			buffI.skip(inputImage.getHeaderLength());
+			buffI.skip(inputImage.getHeader().length);
 			while ((bytesRead = buffI.read(inputDatasegment)) != -1) {
 				byte[] outputDatasegment = new byte[bytesRead];
-				if (compress) {
-					outputDatasegment = compress(inputDatasegment, outputDatasegment, buffersize);
-				} else {
+				if (outputImage.getCompressionMode() == Image.UNCOMPRESSED) {
 					outputDatasegment = convertRGB(inputDatasegment);
+				} else {
+					outputDatasegment = compressRLE(inputDatasegment, bytesRead);
 				}
 				oStream.write(outputDatasegment);
 			}
@@ -174,56 +171,129 @@ public class ImageHelper {
 		}
 	}
 
-	private static byte[] compress(byte[] inputDatasegment, byte[] outputDatasegment, int len) {
+	public static byte[] compressRLE(byte[] inputDatasegment, int len) {
 		int indexOutput = 0;
 		int equalPixels = 0;
 		int unequalPixels = 0;
 
-		// Compressed
-		for (int i = 0; i < inputDatasegment.length - 6; i = i + 3) {
-			if (((i + 1) % len == 0 && i > 0) || equalPixels == 127 || unequalPixels == 128) {
+		/*
+		 * In the worst case 'maxNeeded' entries in the output data array are needed in
+		 * case every pixel of 'inputDatasegment' is different.
+		 */
+		byte[] outputDatasegment = new byte[2 * inputDatasegment.length];
+		// inputDatasegment = convertRGB(inputDatasegment);
+
+		for (int i = 0; i < inputDatasegment.length; i = i + 3) {
+			if (tmpIndex > 208777) {
+				System.out.print("");
+			}
+
+			if (i == inputDatasegment.length - 3) {
+				// Last pixel reached
 				if (equalPixels > 0) {
+					// Before current pixel there was a streak of equal pixels which gets written
 					outputDatasegment[indexOutput++] = (byte) (0x80 + equalPixels);
 					outputDatasegment[indexOutput++] = inputDatasegment[i];
 					outputDatasegment[indexOutput++] = inputDatasegment[i + 1];
 					outputDatasegment[indexOutput++] = inputDatasegment[i + 2];
+					tmpIndex += 4;
 				} else {
-					outputDatasegment[indexOutput++] = (byte) (0x7F + unequalPixels - 1);
-					for (int j = 0; j < unequalPixels; j++) {
-						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * unequalPixels];
-						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * unequalPixels + 1];
-						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * unequalPixels + 2];
-						unequalPixels--;
+					// Raw pixels get written
+					outputDatasegment[indexOutput++] = (byte) unequalPixels;
+					tmpIndex++;
+					int arrayIndexUnequalPixel = unequalPixels;
+					for (int j = 0; j <= unequalPixels; j++) {
+						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel];
+						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 1];
+						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 2];
+						tmpIndex += 3;
+						arrayIndexUnequalPixel--;
 					}
 				}
 			} else {
-				if (inputDatasegment[i] == inputDatasegment[i + 4] && inputDatasegment[i + 1] == inputDatasegment[i + 5]
-						&& inputDatasegment[i + 2] == inputDatasegment[i + 6]) {
-					equalPixels++;
-					if (unequalPixels > 0) {
-						outputDatasegment[indexOutput++] = (byte) (0x7F + unequalPixels - 1);
-						for (int j = 0; j < unequalPixels; j++) {
-							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * unequalPixels];
-							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * unequalPixels + 1];
-							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * unequalPixels + 2];
-							unequalPixels--;
-						}
-						unequalPixels = 0; // TODO notwendig? Und oben evtl. auch (nicht)?
+				// Still some pixels left
+				if (((i + 1) % len == 0 && i > 0) || equalPixels == 127 || unequalPixels == 127) {
+					// End of image line reached or maximum length of possible 7 bit pixel counter
+					// reached
+					if (equalPixels > 0) {
+						// Equal pixels count gets written
+						outputDatasegment[indexOutput++] = (byte) (0x80 + equalPixels);
+						outputDatasegment[indexOutput++] = inputDatasegment[i];
+						outputDatasegment[indexOutput++] = inputDatasegment[i + 1];
+						outputDatasegment[indexOutput++] = inputDatasegment[i + 2];
+						tmpIndex += 4;
+						equalPixels = 0;
 					} else {
-						if (equalPixels == 0) {
-							unequalPixels++;
-						} else {
+						// Raw pixels get written
+						outputDatasegment[indexOutput++] = (byte) unequalPixels;
+						tmpIndex++;
+						int arrayIndexUnequalPixel = unequalPixels;
+						for (int j = 0; j <= unequalPixels; j++) {
+							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel];
+							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 1];
+							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 2];
+							tmpIndex += 3;
+							arrayIndexUnequalPixel--;
+						}
+						unequalPixels = 0;
+					}
+				} else {
+					if (inputDatasegment[i] == inputDatasegment[i + 3]
+							&& inputDatasegment[i + 1] == inputDatasegment[i + 4]
+							&& inputDatasegment[i + 2] == inputDatasegment[i + 5]) {
+						// Current and next pixel are equal
+						equalPixels++;
+						if (unequalPixels > 0) {
+							// Before current pixel there were unequal pixels --> They get written as raw
+							// pixels
+							outputDatasegment[indexOutput++] = (byte) (unequalPixels - 1);
+							tmpIndex++;
+							int arrayIndexUnequalPixel = unequalPixels;
+							for (int j = 0; j < unequalPixels; j++) {
+								outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel];
+								outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 1];
+								outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 2];
+								tmpIndex += 3;
+								arrayIndexUnequalPixel--;
+							}
+							unequalPixels = 0;
+						}
+					} else {
+						// Current and next pixel are unequal
+						if (equalPixels > 0) {
+							// Before current pixel there was a streak of equal pixels which gets written
 							outputDatasegment[indexOutput++] = (byte) (0x80 + equalPixels);
 							outputDatasegment[indexOutput++] = inputDatasegment[i];
 							outputDatasegment[indexOutput++] = inputDatasegment[i + 1];
 							outputDatasegment[indexOutput++] = inputDatasegment[i + 2];
+							tmpIndex += 4;
 							equalPixels = 0;
+						} else {
+							unequalPixels++;
 						}
 					}
+
 				}
 			}
+
+		}
+
+		/*
+		 * Let's get rid of the entries in outputDatasegment which were reserved but not
+		 * needed when the worst case mentioned above did not happen.
+		 */
+		if (indexOutput < inputDatasegment.length * 2) {
+			byte[] tmp = new byte[indexOutput];
+			for (int i = 0; i < tmp.length; i++) {
+				tmp[i] = outputDatasegment[i];
+			}
+			outputDatasegment = tmp;
 		}
 		return outputDatasegment;
+	}
+
+	public static byte[] decompressRLE(byte[] inputDatasegment) {
+		return null;
 	}
 
 	private static byte[] convertRGB(byte[] inputDatasegment) {
@@ -236,5 +306,26 @@ public class ImageHelper {
 			outputDatasegment[i + 2] = inputDatasegment[i + 2];
 		}
 		return outputDatasegment;
+	}
+
+	public static void writeHeaderIntoFile(Image image) {
+		RandomAccessFile file = null;
+		try {
+			file = new RandomAccessFile(image.getFile(), "rw");
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		int[] header = image.getHeader();
+		try {
+			for (int i = 0; i < header.length; i++) {
+				file.seek(i);
+				file.write((byte) header[i] & 0xFF);
+			}
+			file.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

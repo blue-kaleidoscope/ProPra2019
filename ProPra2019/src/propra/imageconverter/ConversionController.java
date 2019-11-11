@@ -6,9 +6,9 @@ import java.io.File;
  * @author Oliver Eckstein
  *
  */
-public class ImageController {
+public class ConversionController {
 	private Image inputImage;
-	private Image outputImage;
+	private Image outputImage;	
 	
 	/**
 	 * Creates a new <code>ImageController</code>.
@@ -16,30 +16,43 @@ public class ImageController {
 	 * @param outputPath the path for the target image.
 	 * @throws ImageHandlingException An exception is thrown when the conversion cannot be performed.
 	 */
-	public ImageController(File inputFile, File outputFile) throws ImageHandlingException {
+	public ConversionController(File inputFile, File outputFile, String compression) throws ImageHandlingException {
 		
 		String inputExtension = ImageHelper.getFileExtension(inputFile.getPath());
 		String outputExtension = ImageHelper.getFileExtension(outputFile.getPath());
 		
+		if(!(compression.equals("rle") || compression.equals("uncompressed"))) {
+			throw new ImageHandlingException("Unknown compression type: " + compression, 
+					ErrorCodes.INVALID_COMPRESSION);
+		}
+		
 		// Let's check whether the desired conversion is valid
 		if(inputExtension.equals("tga")) {
-			inputImage = new ImageTGA(inputFile, Image.INPUT_IMAGE);
+			inputImage = new ImageTGA(inputFile);
 		} else if (inputExtension.equals("propra")) {
-			inputImage = new ImagePropra(inputFile, Image.INPUT_IMAGE);
+			inputImage = new ImagePropra(inputFile);
 		} else {
 			throw new ImageHandlingException("Unknown input file format: " + inputExtension, 
 					ErrorCodes.INVALID_FILEFORMAT);
 		}
 		
+		int compressionMode;
+		if (compression.equals("rle")) {
+			compressionMode = Image.RLE;
+		} else {
+			compressionMode = Image.UNCOMPRESSED;
+		}
+		 
+		
 		if(outputExtension.equals("tga")) {
-			outputImage = new ImageTGA(outputFile, Image.OUTPUT_IMAGE);			
+			outputImage = new ImageTGA(outputFile, compressionMode);			
 		} else if (outputExtension.equals("propra")) {
-			outputImage = new ImagePropra(outputFile, Image.OUTPUT_IMAGE);			
+			outputImage = new ImagePropra(outputFile, compressionMode);			
 		} else {
 			throw new ImageHandlingException("Unknown output file format: " + outputExtension, 
 					ErrorCodes.INVALID_FILEFORMAT);
 		}
-		outputImage.prepareConversion(inputImage);
+		outputImage.setDimensions(inputImage);
 	}
 	
 	/**
@@ -47,13 +60,14 @@ public class ImageController {
 	 * @throws ImageHandlingException An exception is thrown when the conversion cannot be performed.
 	 */
 	public void convert() throws ImageHandlingException {
-		if (!inputImage.getExtension().equals(outputImage.getExtension())) {
+		//if (!inputImage.getExtension().equals(outputImage.getExtension())) {
 			// Either tga>propra or propra>tga
-			ImageHelper.convert(inputImage, outputImage, false);
-		} else {
+			ImageHelper.convertTgaPropra(inputImage, outputImage);			
+			outputImage.finalizeConversion();
+		//} else {
 			// tga>tga or propra>propra TODO
 			//outputDatasegment = inputDatasegment;
-		}
+		//}
 		System.out.println("Input image successfully converted.");
 		System.out.println(inputImage.getPath() + " --> " + outputImage.getPath());
 	}

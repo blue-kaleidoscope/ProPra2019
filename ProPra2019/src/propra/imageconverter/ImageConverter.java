@@ -16,7 +16,7 @@ public class ImageConverter {
 	public static void main(String[] args) {
 		System.out.println(" +++ ImageConverter started +++");
 		
-		if (args.length != 2) {
+		if (args.length != 3) {
 			System.err.println("Not enough arguments specified.");
 			System.out.println(" +++ Error while converting - Shutting down ImageConverter +++");
 			System.exit(123);
@@ -24,17 +24,18 @@ public class ImageConverter {
 
 		String inputPath = args[0].replace("--input=", "");
 		String outputPath = args[1].replace("--output=", "");
+		String compression = args[2].replace("--compression=", "");
 
 		File inputImage = new File(inputPath);
 		File outputImage = new File(outputPath);
 		
 		if (!inputImage.exists()) {
-			System.out.println(" Invalid file paths given for input or output image.");
+			System.out.println(" Invalid file path given for input image.");
 			System.out.println(" +++ Shutting down ImageConverter +++");
 			System.exit(123);
 		}
 		try {
-			ImageController controller = new ImageController(inputImage, outputImage);
+			ConversionController controller = new ConversionController(inputImage, outputImage, compression);
 			controller.convert();
 		} catch (ImageHandlingException e) {
 			System.err.println(e.getMessage());

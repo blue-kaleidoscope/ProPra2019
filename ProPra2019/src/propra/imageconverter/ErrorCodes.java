@@ -12,7 +12,8 @@ public enum ErrorCodes {
 	INVALID_DATASEGMENT(4),
 	INVALID_CHECKSUM(5),
 	IO_ERROR(6),
-	INVALID_FILE(7);
+	INVALID_FILE(7),
+	INVALID_COMPRESSION(8);
 	
 	
 	private int errorCode;
