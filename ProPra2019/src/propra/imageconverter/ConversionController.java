@@ -8,7 +8,7 @@ import java.io.File;
  */
 public class ConversionController {
 	private Image inputImage;
-	private Image outputImage;	
+	private Image outputImage;
 	
 	/**
 	 * Creates a new <code>ImageController</code>.
@@ -18,8 +18,8 @@ public class ConversionController {
 	 */
 	public ConversionController(File inputFile, File outputFile, String compression) throws ImageHandlingException {
 		
-		String inputExtension = ImageHelper.getFileExtension(inputFile.getPath());
-		String outputExtension = ImageHelper.getFileExtension(outputFile.getPath());
+		String inputExtension = ConverterHelper.getFileExtension(inputFile.getPath());
+		String outputExtension = ConverterHelper.getFileExtension(outputFile.getPath());
 		
 		if(!(compression.equals("rle") || compression.equals("uncompressed"))) {
 			throw new ImageHandlingException("Unknown compression type: " + compression, 
@@ -60,14 +60,33 @@ public class ConversionController {
 	 * @throws ImageHandlingException An exception is thrown when the conversion cannot be performed.
 	 */
 	public void convert() throws ImageHandlingException {
-		//if (!inputImage.getExtension().equals(outputImage.getExtension())) {
-			// Either tga>propra or propra>tga
-			ImageHelper.convertTgaPropra(inputImage, outputImage);			
-			outputImage.finalizeConversion();
-		//} else {
-			// tga>tga or propra>propra TODO
-			//outputDatasegment = inputDatasegment;
-		//}
+		
+		if(inputImage.getExtension().equals("tga") && outputImage.getExtension().equals("propra") ||
+				inputImage.getExtension().equals("propra") && outputImage.getExtension().equals("tga")) {
+			if(outputImage.getCompressionMode() == Image.UNCOMPRESSED) {
+				if(inputImage.getCompressionMode() == Image.UNCOMPRESSED) {
+					// TGA>PROPRA oder PROPRA>TGA
+					// UNC>UNC
+					ConverterHelper.convertTgaPropra(inputImage, outputImage, true);
+				} else {
+					// TGA>PROPRA oder PROPRA>TGA
+					// COMP>UNC
+					ConverterHelper.decompressRLE(inputImage, outputImage, true);
+				}
+			} else {
+				if(inputImage.getCompressionMode() == Image.UNCOMPRESSED) {
+					// TGA>PROPRA oder PROPRA>TGA
+					// UNC>COMP
+					ConverterHelper.convertTgaPropra(inputImage, outputImage, true);
+				} else {
+					// TGA>PROPRA oder PROPRA>TGA
+					// COMP>COMP
+					ConverterHelper.copyImage(inputImage, outputImage, true);
+				}
+			}
+		}
+		
+		outputImage.finalizeConversion();
 		System.out.println("Input image successfully converted.");
 		System.out.println(inputImage.getPath() + " --> " + outputImage.getPath());
 	}

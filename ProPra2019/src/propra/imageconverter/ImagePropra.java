@@ -4,6 +4,7 @@ import java.io.File;
 
 public class ImagePropra extends Image {
 	private final String HEADER_TEXT = "ProPraWS19";
+	private long dataLength;
 
 	/**
 	 * Creates a new <code>ImagePropra</code> for an existing propra image file
@@ -23,12 +24,25 @@ public class ImagePropra extends Image {
 	public ImagePropra(File file, int compressionMode) throws ImageHandlingException {
 		super(file, compressionMode);
 	}
+	
+	/**
+	 * To set the length of the data segment this PROPRA image.
+	 * @param dataLength the data segment's length
+	 */
+	public void setDataLength(long dataLength) {
+		this.dataLength = dataLength;
+	}
 
 	@Override
 	protected void setProperties() {
 		headerLength = 28;
 		bitsPerPixel = 24;
 		fileExtension = "propra";
+		if(compressionMode == UNCOMPRESSED) {
+			compressionType = 0;
+		} else {
+			compressionType = 1;
+		}
 
 		headerWidth = 10;
 		headerHeight = 12;
@@ -39,10 +53,26 @@ public class ImagePropra extends Image {
 	@Override
 	protected void checkHeader() throws ImageHandlingException {
 		super.checkHeader();
+
+		// Get compression type of this input image from header
+		compressionType = header[headerCompression];
+
 		// Check if compression type is valid.
-		if (!(compressionType == 0 || compressionType == 1)) {
+		if (compressionType == 0) {
+			compressionMode = UNCOMPRESSED;
+		} else if (compressionType == 1) {
+			compressionMode = RLE;
+		} else {
 			throw new ImageHandlingException("Invalid compression of source file.", ErrorCodes.INVALID_HEADERDATA);
 		}
+
+		// Check if actual image data length fits to dimensions given in the header.
+		if (file.length() - headerLength != height * width * 3 && compressionMode == Image.UNCOMPRESSED) {
+			throw new ImageHandlingException(
+					"Source file corrupt. Image data length does not fit to header information.",
+					ErrorCodes.INVALID_HEADERDATA);
+		}
+
 		/*
 		 * Check if length of data segment from header and image dimensions from header
 		 * are valid.
@@ -51,7 +81,7 @@ public class ImagePropra extends Image {
 		long dataLength = header[16] + (header[17] << 8) + (header[18] << 16) + (header[19] << 24) + (header[20] << 32)
 				+ (header[21] << 40) + (header[22] << 48) + (header[23] << 56);
 		// Compare the size of the data segment with the image dimensions
-		if (dataLength != width * height * 3) {
+		if (dataLength != width * height * 3 && this.compressionMode == Image.UNCOMPRESSED) {
 			throw new ImageHandlingException("Source file corrupt. Invalid image size information in header.",
 					ErrorCodes.INVALID_HEADERDATA);
 		}
@@ -69,13 +99,14 @@ public class ImagePropra extends Image {
 		 * Check for valid checksum.
 		 */
 		// Compare the actual checksum with the checksum from the header
-		byte[] checkSum = ImageHelper.getCheckSum(file, header.length);
+		byte[] checkSum = ConverterHelper.getCheckSum(file, header.length);
 		for (int i = 0; i < 4; i++) {
 			if ((checkSum[i] & 0xFF) != header[24 + i]) {
 				throw new ImageHandlingException("Source file corrupt. Invalid check sum.",
 						ErrorCodes.INVALID_CHECKSUM);
 			}
 		}
+
 	}
 
 	@Override
@@ -88,12 +119,17 @@ public class ImagePropra extends Image {
 	}
 
 	@Override
-	public void finalizeConversion() {
+	public void finalizeConversion() throws ImageHandlingException {
 
 		/*
 		 * Write the length of the data segment into the header (little-endian).
 		 */
-		long sizeOfDataSegment = width * height * 3;
+		long sizeOfDataSegment = 0; 
+		if(compressionMode == Image.UNCOMPRESSED) {
+			sizeOfDataSegment = width * height * 3;
+		} else {
+			sizeOfDataSegment = dataLength;
+		}
 		header[16] = (byte) sizeOfDataSegment;
 		header[17] = (byte) (sizeOfDataSegment >> 8);
 		header[18] = (byte) (sizeOfDataSegment >> 16);
@@ -106,11 +142,11 @@ public class ImagePropra extends Image {
 		/*
 		 * Write check sum into the header (little-endian).
 		 */
-		byte[] checkSum = ImageHelper.getCheckSum(file, header.length);
+		byte[] checkSum = ConverterHelper.getCheckSum(file, header.length);
 		for (int i = 0; i < checkSum.length; i++) {
 			header[24 + i] = checkSum[i];
 		}
 
-		ImageHelper.writeHeaderIntoFile(this);
+		ConverterHelper.writeHeaderIntoFile(this);
 	}
 }

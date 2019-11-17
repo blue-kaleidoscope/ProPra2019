@@ -30,14 +30,14 @@ public class ImageTGA extends Image {
 	protected void setProperties() {
 		headerLength = 18;
 		bitsPerPixel = 24;
+		origin = 32; // origin top-left
+		fileExtension = "tga";
 		if(compressionMode == UNCOMPRESSED) {
 			compressionType = 2;
 		} else {
 			compressionType = 10;
 		}
-		origin = 32; // origin top-left
-		fileExtension = "tga";
-
+		
 		headerWidth = 12;
 		headerHeight = 14;
 		headerCompression = 2;
@@ -54,16 +54,32 @@ public class ImageTGA extends Image {
 	@Override
 	protected void checkHeader() throws ImageHandlingException {
 		super.checkHeader();
+		
+		// Get compression type of this input image from header
+		compressionType = header[headerCompression];
 
 		// Check if compression type is valid.
-		if (!(compressionType == 2 || compressionType == 10)) {
+		if (compressionType == 2) {
+			compressionMode = UNCOMPRESSED;
+		} else if (compressionType == 10) {
+			compressionMode = RLE;
+		} else {
 			throw new ImageHandlingException("Invalid compression of source file.", ErrorCodes.INVALID_HEADERDATA);
 		}
+
+		// Check if actual image data length fits to dimensions given in the header.
+		if (file.length() - headerLength != height * width * 3 && compressionMode == Image.UNCOMPRESSED) {
+			throw new ImageHandlingException(
+					"Source file corrupt. Image data length does not fit to header information.",
+					ErrorCodes.INVALID_HEADERDATA);
+		}
+
+		
+
 	}
 
 	@Override
-	protected void finalizeConversion() {
-		// Nothing to do here...
-
+	protected void finalizeConversion() throws ImageHandlingException {
+		// Nothing to do here for TGA images.		
 	}
 }

@@ -17,7 +17,7 @@ public abstract class Image {
 	protected byte bitsPerPixel;
 	protected String fileExtension;
 	protected File file;
-	protected int compressionMode;
+	protected int compressionMode;	
 
 	public static final int UNCOMPRESSED = 0;
 	public static final int RLE = 1;
@@ -39,19 +39,21 @@ public abstract class Image {
 	 */
 	public Image(File file) throws ImageHandlingException {
 		if (file == null) {
-			throw new ImageHandlingException("Invalid input file. Cannot create Image.", ErrorCodes.IO_ERROR);
+			throw new ImageHandlingException(
+					"Invalid input file. Cannot create Image.", ErrorCodes.IO_ERROR);
 		}
-		this.file = file;
-		setProperties();		
-
-		this.header = ImageHelper.getHeaderFromFile(file, headerLength);
+		this.file = file;		
+		setProperties();
+		
+		this.header = ConverterHelper.getHeaderFromFile(file, headerLength);
 		checkHeader();
 		System.out.println("Input image header information successfully checked: " + file.getPath());
 	}
 
 	public Image(File file, int compressionMode) throws ImageHandlingException {
 		if (file == null) {
-			throw new ImageHandlingException("Invalid output file. Cannot create Image.", ErrorCodes.IO_ERROR);
+			throw new ImageHandlingException(
+					"Invalid output file. Cannot create Image.", ErrorCodes.IO_ERROR);
 		}
 		this.file = file;
 		this.compressionMode = compressionMode;
@@ -66,6 +68,14 @@ public abstract class Image {
 	 */
 	public int[] getHeader() {
 		return header;
+	}
+	
+	public byte[] getByteHeader() {
+		byte[] byteHeader = new byte[header.length];
+		for (int i = 0; i < byteHeader.length; i++) {
+			byteHeader[i] = (byte) header[i];
+		}
+		return byteHeader;
 	}
 
 	public String getPath() {
@@ -103,7 +113,11 @@ public abstract class Image {
 		header[headerHeight + 1] = (byte) (height >> 8);
 	}
 
-	protected abstract void finalizeConversion();
+	/**
+	 * Call this method when file content needs to be prepared after an image conversion took place.
+	 * @throws ImageHandlingException when conversion could not be finalized.
+	 */
+	protected abstract void finalizeConversion() throws ImageHandlingException;
 
 	/**
 	 * To define properties which are unique for this type of <code>Image</code>.
@@ -118,9 +132,7 @@ public abstract class Image {
 	 *                                information does not fit to this type of
 	 *                                <code>Image</code>.
 	 */
-	protected void checkHeader() throws ImageHandlingException {
-		// Get compression type of this input image from header
-		compressionType = header[headerCompression];		
+	protected void checkHeader() throws ImageHandlingException {			
 
 		// Get source image dimensions from header.
 		width = (header[headerWidth + 1] << 8) + header[headerWidth];
@@ -130,14 +142,7 @@ public abstract class Image {
 		if (width <= 0 || height <= 0) {
 			throw new ImageHandlingException("Source file corrupt. Invalid image dimensions.",
 					ErrorCodes.INVALID_HEADERDATA);
-		}
-
-		// Check if actual image data length fits to dimensions given in the header.
-		if (file.length() - headerLength != height * width * 3) {
-			throw new ImageHandlingException(
-					"Source file corrupt. Image data length does not fit to header information.",
-					ErrorCodes.INVALID_HEADERDATA);
-		}
+		}		
 	}
 
 	/**
