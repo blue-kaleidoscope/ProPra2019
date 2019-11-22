@@ -10,42 +10,46 @@ import java.io.RandomAccessFile;
 import java.util.Scanner;
 
 /**
- * A helper class which contains methods supporting the handling of files,
- * image data and encoding/decoding of base-n files.
+ * A helper class which contains methods supporting the handling of files, image
+ * data and encoding/decoding of base-n files.
  * 
  * @author Oliver Eckstein
  *
  */
 public class ConverterHelper {
-	
+
 	private static final String BASE32_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
 
 	/**
-	 * Converts a file into a base-n representation text file.
+	 * Handles the conversion of a file into a base-n representation text file.
+	 * 
 	 * @param inputFile the file to be converted.
-	 * @param encode <code>true</code> when the file gets encoded. <code>false</code> when the file gets decoded.
-	 * @param base32 <code>true</code> when the file should be treated with BASE32 encoding.
-	 * @param alphabet the encoding alphabet when <code>base32</code> is false and a file should get encoded.
+	 * @param encode    <code>true</code> when the file gets encoded.
+	 *                  <code>false</code> when the file gets decoded.
+	 * @param base32    <code>true</code> when the file should be treated with
+	 *                  BASE32 encoding.
+	 * @param alphabet  the encoding alphabet when <code>base32</code> is false and
+	 *                  a file should get encoded.
 	 * @throws ImageHandlingException when the file could not get encoded.
 	 */
-	public static void baseCoder(File inputFile, boolean encode, boolean base32, String alphabet)
+	public static void baseCodeHandler(File inputFile, boolean encode, boolean base32, String alphabet)
 			throws ImageHandlingException {
 		BufferedInputStream buffI = null;
 		FileOutputStream oStream = null;
 		int buffersize = 0;
 		File outputFile = null;
 		if (encode) {
-			// File gets encoded			
-			if (base32) {				
+			// File gets encoded
+			if (base32) {
 				outputFile = new File(inputFile.getPath() + ".base-32");
 				alphabet = BASE32_ALPHABET;
-			} else {				
+			} else {
 				outputFile = new File(inputFile.getPath() + ".base-n");
 			}
 			buffersize = 1024 * (int) (Math.log(alphabet.length()) / Math.log(2));
 		} else {
-			// File gets decoded			
-			if (base32) {				
+			// File gets decoded
+			if (base32) {
 				outputFile = new File(inputFile.getPath().replace(".base-32", ""));
 				alphabet = BASE32_ALPHABET;
 			} else {
@@ -59,13 +63,14 @@ public class ConverterHelper {
 					throw new ImageHandlingException("Could not read from input file:" + inputFile.getPath(),
 							ErrorCodes.INVALID_FILEPATH);
 				}
-				
+
 			}
 			buffersize = 1024 * getDecodeBufferSizeMultiplier(alphabet);
 		}
 		int bytesRead;
 
-		// Let's prepare everything to read from the source file and write into the target file
+		// Let's prepare everything to read from the source file and write into the
+		// target file
 		try {
 			buffI = new BufferedInputStream(new FileInputStream(inputFile), buffersize);
 			oStream = new FileOutputStream(outputFile);
@@ -82,8 +87,8 @@ public class ConverterHelper {
 				// Write the alphabet at the beginning of the file
 				oStream.write(alphabet.getBytes());
 				oStream.write('\n');
-			} else if(!encode && !base32) {
-				//We must skip the line containing the alphabet
+			} else if (!encode && !base32) {
+				// We must skip the line containing the alphabet
 				buffI.skip(alphabet.length() + 1);
 			}
 
@@ -103,9 +108,12 @@ public class ConverterHelper {
 	}
 
 	/**
-	 * Decodes a file with the base-n algorithm. Supports BASE2, BASE4, BASE8, BASE16, BASE32 and BASE64.
-	 * @param input the bytes from the file to be converted.
-	 * @param length <code>input</code> will be used from <code>0</code> to <code>length</code>.
+	 * Decodes a file with the base-n algorithm. Supports BASE2, BASE4, BASE8,
+	 * BASE16, BASE32 and BASE64.
+	 * 
+	 * @param input    the bytes from the file to be converted.
+	 * @param length   <code>input</code> will be used from <code>0</code> to
+	 *                 <code>length</code>.
 	 * @param alphabet the decoding alphabet
 	 * @return the decoded bytes in base-n representation
 	 */
@@ -120,7 +128,7 @@ public class ConverterHelper {
 
 		if (lastInputPackageLength != 0) {
 			inputPackages = (input.length - difference) / inputPackageByteCount + 1;
-			outputByteCount = (inputPackages - 1) * outputPackageByteCount 
+			outputByteCount = (inputPackages - 1) * outputPackageByteCount
 					+ (int) (lastInputPackageLength * inputByteLength / 8);
 		} else {
 			inputPackages = (input.length - difference) / inputPackageByteCount;
@@ -139,7 +147,7 @@ public class ConverterHelper {
 				remainingInputBytes = inputPackageByteCount;
 				remainingOutputBytes = (int) (remainingInputBytes * inputByteLength / 8);
 			}
-			
+
 			// Get one input byte package
 			long byteBuffer = 0;
 			for (int i = inputPackage * inputPackageByteCount; i < inputPackage * inputPackageByteCount
@@ -154,9 +162,9 @@ public class ConverterHelper {
 			int shiftCount = remainingInputBytes * outputPackageByteCount - inputPackageByteCount;
 			for (int i = inputPackage * outputPackageByteCount; i < inputPackage * outputPackageByteCount
 					+ remainingOutputBytes; i++) {
-				if(shiftCount >= 0) {
+				if (shiftCount >= 0) {
 					output[i] = (byte) (byteBuffer >> shiftCount);
-				}				
+				}
 				shiftCount -= inputPackageByteCount;
 			}
 		}
@@ -164,10 +172,14 @@ public class ConverterHelper {
 	}
 
 	/**
-	 * Encodes a file with the base-n algorithm. Supports BASE2, BASE4, BASE8, BASE16, BASE32 and BASE64.
-	 * @param input the bytes from the file to be converted.
-	 * @param length <code>input</code> will be used from <code>0</code> to <code>length</code>.
-	 * @param alphabet the decoding alphabet. The length of this alphabet must be between 2^1 and 2^6
+	 * Encodes a file with the base-n algorithm. Supports BASE2, BASE4, BASE8,
+	 * BASE16, BASE32 and BASE64.
+	 * 
+	 * @param input    the bytes from the file to be converted.
+	 * @param length   <code>input</code> will be used from <code>0</code> to
+	 *                 <code>length</code>.
+	 * @param alphabet the decoding alphabet. The length of this alphabet must be
+	 *                 between 2^1 and 2^6
 	 * @return the decoded bytes in base-n representation
 	 */
 	private static byte[] encodeBaseN(byte[] input, int length, String alphabet) {
@@ -219,13 +231,15 @@ public class ConverterHelper {
 			// output bytes
 			int shiftCount = remainingInputBytes * 8 - outputByteLength;
 			byte removalMask = 0;
-			// Since an output byte can be shorter than 8 bit (i.e. in base32 it is 5 bit long)
-			// we must remove all bits which do not belong to the output byte by using 'removelMask'
+			// Since an output byte can be shorter than 8 bit (i.e. in base32 it is 5 bit
+			// long)
+			// we must remove all bits which do not belong to the output byte by using
+			// 'removelMask'
 			for (int i = 0; i < outputByteLength; i++) {
 				removalMask <<= 1;
 				removalMask |= 0x1;
 			}
-			
+
 			byte outputBits = 0;
 			for (int i = inputPackage * outputPackageByteCount; i < inputPackage * outputPackageByteCount
 					+ remainingOutputBytes; i++) {
@@ -255,7 +269,7 @@ public class ConverterHelper {
 	 * Calculates the check sum of image data based on the PROPRA file specification
 	 * V2.0.
 	 * 
-	 * @param file the file of which the check sum gets calculated.
+	 * @param file   the file of which the check sum gets calculated.
 	 * @param offset offset for skipping the beginning of a file.
 	 * @return the check sum.
 	 * @throws ImageHandlingException when <code>file</code> could not get accessed.
@@ -284,8 +298,7 @@ public class ConverterHelper {
 			}
 			buffI.close();
 		} catch (IOException e) {
-			throw new ImageHandlingException("Error while accessing the output file!",
-					ErrorCodes.IO_ERROR);
+			throw new ImageHandlingException("Error while accessing the output file!", ErrorCodes.IO_ERROR);
 		}
 
 		int checkSum = a_i * (int) Math.pow(2, 16) + b_i;
@@ -300,6 +313,7 @@ public class ConverterHelper {
 
 	/**
 	 * To extract the file extension of a given file path.
+	 * 
 	 * @param filePath the file path.
 	 * @return the extension of the file path in lower case letters.
 	 * @throws ImageHandlingException when file path does not contain a file
@@ -324,7 +338,8 @@ public class ConverterHelper {
 
 	/**
 	 * To extract the header of a given file.
-	 * @param filePath file path to the file.
+	 * 
+	 * @param filePath     file path to the file.
 	 * @param headerLength the length of the file's header.
 	 * @return the bytes of the header.
 	 * @throws ImageHandlingException is thrown when source file could not be read
@@ -357,14 +372,20 @@ public class ConverterHelper {
 	}
 
 	/**
-	 * To convert a 'TGA' file to a 'PROPRA' file or vice versa.
-	 * @param inputImage the input image.
+	 * To handle conversion from PROPRA > TGA or vice versa or from PROPRA > PROPRA or
+	 * TGA > TGA when target image should be compressed using run length encoding.
+	 * Do not call this method when converting from PROPRA > PROPRA or
+	 * TGA > TGA without compressing the target image or when the source image
+	 * was compressed and the target image should be uncompressed.
+	 * @param inputImage  the input image.
 	 * @param outputImage the output image.
-	 * @param compress <code>true</code> when the file should get compressed using run length encoding.
+	 * @param compress    <code>true</code> when the output file should get compressed
+	 *                    using run length encoding.
 	 * @return the number of written bytes.
-	 * @throws ImageHandlingException an exception is thrown when the conversion could not be executed. 
+	 * @throws ImageHandlingException an exception is thrown when the conversion
+	 *                                could not be executed.
 	 */
-	public static long convertTgaPropra(Image inputImage, Image outputImage, boolean compress)
+	public static long convertAndCompress(Image inputImage, Image outputImage, boolean compress)
 			throws ImageHandlingException {
 		BufferedInputStream buffI = null;
 		FileOutputStream oStream = null;
@@ -388,7 +409,8 @@ public class ConverterHelper {
 			while ((bytesRead = buffI.read(inputDatasegment)) != -1) {
 				byte[] outputDatasegment = new byte[bytesRead];
 				if (compress) {
-					outputDatasegment = compressRLE(inputDatasegment, bytesRead, true);
+					outputDatasegment = compressRLE(inputDatasegment, bytesRead,
+							!inputImage.getExtension().equals(outputImage.getExtension()));
 				} else {
 					outputDatasegment = convertRGB(inputDatasegment);
 				}
@@ -396,7 +418,8 @@ public class ConverterHelper {
 				bytesWritten += outputDatasegment.length;
 			}
 			if (compress && outputImage instanceof ImagePropra) {
-				// When the compression to a propra file was successful the length of the data segment must be written
+				// When the compression to a propra file was successful the length of the data
+				// segment must be written
 				// into the file.
 				ImagePropra tmp = (ImagePropra) outputImage;
 				tmp.setDataLength(bytesWritten);
@@ -412,15 +435,25 @@ public class ConverterHelper {
 
 	/**
 	 * To compress data using run length encoding.
+	 * 
 	 * @param inputDatasegment the images's data segment.
-	 * @param len the length of a line of pixel of this image
-	 * @param rgbConversion <code>true</code> when the pixel order should be changed from BGR to GBR
+	 * @param len              the length of a line of pixel of this image
+	 * @param rgbConversion    <code>true</code> when the pixel order should be
+	 *                         changed from BGR to GBR
 	 * @return the compressed data
 	 */
 	private static byte[] compressRLE(byte[] inputDatasegment, int len, boolean rgbConversion) {
 		int indexOutput = 0;
 		int equalPixels = 0;
 		int unequalPixels = 0;
+		
+		int firstIndex = 0;
+		int secondIndex = 1;
+		
+		if(rgbConversion) {
+			firstIndex = 1;
+			secondIndex = 0;
+		}
 
 		/*
 		 * In the worst case 'maxSize' entries in the output data array are needed in
@@ -436,8 +469,8 @@ public class ConverterHelper {
 				if (equalPixels > 0) {
 					outputDatasegment[indexOutput++] = (byte) (0x80 + equalPixels);
 					// Before current pixel there was a streak of equal pixels which gets written
-					outputDatasegment[indexOutput++] = inputDatasegment[i + 1];
-					outputDatasegment[indexOutput++] = inputDatasegment[i];
+					outputDatasegment[indexOutput++] = inputDatasegment[i + firstIndex];
+					outputDatasegment[indexOutput++] = inputDatasegment[i + secondIndex];
 					outputDatasegment[indexOutput++] = inputDatasegment[i + 2];
 
 				} else {
@@ -445,8 +478,8 @@ public class ConverterHelper {
 					outputDatasegment[indexOutput++] = (byte) unequalPixels;
 					int arrayIndexUnequalPixel = unequalPixels;
 					for (int j = 0; j <= unequalPixels; j++) {
-						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 1];
-						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel];
+						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + firstIndex];
+						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + secondIndex];
 						outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 2];
 						arrayIndexUnequalPixel--;
 					}
@@ -458,8 +491,8 @@ public class ConverterHelper {
 					if (equalPixels > 0) {
 						// Equal pixels count gets written
 						outputDatasegment[indexOutput++] = (byte) (0x80 + equalPixels);
-						outputDatasegment[indexOutput++] = inputDatasegment[i + 1];
-						outputDatasegment[indexOutput++] = inputDatasegment[i];
+						outputDatasegment[indexOutput++] = inputDatasegment[i + firstIndex];
+						outputDatasegment[indexOutput++] = inputDatasegment[i + secondIndex];
 						outputDatasegment[indexOutput++] = inputDatasegment[i + 2];
 						equalPixels = 0;
 					} else {
@@ -467,8 +500,8 @@ public class ConverterHelper {
 						outputDatasegment[indexOutput++] = (byte) unequalPixels;
 						int arrayIndexUnequalPixel = unequalPixels;
 						for (int j = 0; j <= unequalPixels; j++) {
-							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 1];
-							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel];
+							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + firstIndex];
+							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + secondIndex];
 							outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 2];
 
 							arrayIndexUnequalPixel--;
@@ -487,8 +520,8 @@ public class ConverterHelper {
 							outputDatasegment[indexOutput++] = (byte) (unequalPixels - 1);
 							int arrayIndexUnequalPixel = unequalPixels;
 							for (int j = 0; j < unequalPixels; j++) {
-								outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 1];
-								outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel];
+								outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + firstIndex];
+								outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + secondIndex];
 								outputDatasegment[indexOutput++] = inputDatasegment[i - 3 * arrayIndexUnequalPixel + 2];
 								arrayIndexUnequalPixel--;
 							}
@@ -499,8 +532,8 @@ public class ConverterHelper {
 						if (equalPixels > 0) {
 							// Before current pixel there was a streak of equal pixels which gets written
 							outputDatasegment[indexOutput++] = (byte) (0x80 + equalPixels);
-							outputDatasegment[indexOutput++] = inputDatasegment[i + 1];
-							outputDatasegment[indexOutput++] = inputDatasegment[i];
+							outputDatasegment[indexOutput++] = inputDatasegment[i + firstIndex];
+							outputDatasegment[indexOutput++] = inputDatasegment[i + secondIndex];
 							outputDatasegment[indexOutput++] = inputDatasegment[i + 2];
 							equalPixels = 0;
 						} else {
@@ -526,13 +559,25 @@ public class ConverterHelper {
 	}
 
 	/**
-	 * To decompress an image which was compressed using run length encoding.
-	 * @param inputImage the image which should get decompressed.
-	 * @param outputImage the output image to which the decompressed data should be written.
-	 * @param rgbConversion <code>true</code> when the pixel order should be changed from BGR to GBR
-	 * @throws ImageHandlingException when <code>inputImage</code> or <code>outputImage</code> could not be accessed.
+	 * To handle a compressed image which was compressed using run length encoding.
+	 * This method either allows decompressing a compressed image or converting from
+	 * one compressed image to another compressed image but with a different pixel order i.e. when
+	 * converting from TGA > PROPRA and both images are compressed using run length encoding. 
+	 * @param inputImage    the input image
+	 * @param outputImage   the output image
+	 * @param rgbConversion <code>true</code> when the pixel order should be changed
+	 *                      from BGR to GBR
+	 * @param decompress    <code>true</code> when the <code>outputImage</code> should be
+	 *                      decompressed<br><code>false</code> if <code>inputImage</code> is run length encoded and
+	 *                      the <code>outputImage</code> should also be compressed using RLE but the order of the
+	 *                      pixel needs to be changed (i.e. TGA > PROPRA or vice
+	 *                      versa).
+	 * @throws ImageHandlingException when <code>inputImage</code> or
+	 *                                <code>outputImage</code> could not be
+	 *                                accessed.
 	 */
-	public static void decompressRLE(Image inputImage, Image outputImage, boolean rgbConversion) throws ImageHandlingException {
+	public static void handleCompressedImages(Image inputImage, Image outputImage, boolean rgbConversion, boolean decompress)
+			throws ImageHandlingException {
 
 		BufferedInputStream buffI = null;
 		FileOutputStream oStream = null;
@@ -568,28 +613,49 @@ public class ConverterHelper {
 
 						// From the previous array "inputDatasegment" there are still bytes to write
 						if (equalPixels) {
-
-							// 1 to 3 pixels from the previous array "inputDatasegment" need to be written
-							for (int i = 0; i < pixelCount; i++) {
-								// Those pixels will get written pixelCount times
+							if (decompress) {
+								// 1 to 3 pixels from the previous array "inputDatasegment" need to be written
+								for (int i = 0; i < pixelCount; i++) {
+									// Those pixels will get written pixelCount times
+									if (restByteCount == 3) {
+										// The three bytes are at the very beginning of the new array
+										for (int k = 0; k < 3; k++) {
+											outputDatasegment[outputIndex++] = inputDatasegment[k];
+										}
+									} else if (restByteCount == 2) {
+										// Two bytes are taken from the previous array the third is from the new one
+										outputDatasegment[outputIndex++] = tmpByte1;
+										outputDatasegment[outputIndex++] = tmpByte2;
+										outputDatasegment[outputIndex++] = inputDatasegment[0];
+									} else if (restByteCount == 1) {
+										// One byte is taken from the previous array, the 2nd and 3rd are from the new
+										// one
+										outputDatasegment[outputIndex++] = tmpByte1;
+										outputDatasegment[outputIndex++] = inputDatasegment[0];
+										outputDatasegment[outputIndex++] = inputDatasegment[1];
+									}
+								}
+							} else {
+								outputDatasegment[outputIndex++] = controlByte;
 								if (restByteCount == 3) {
 									// The three bytes are at the very beginning of the new array
-									for (int k = 0; k < 3; k++) {
-										outputDatasegment[outputIndex++] = inputDatasegment[k];
-									}
+									outputDatasegment[outputIndex++] = inputDatasegment[1];
+									outputDatasegment[outputIndex++] = inputDatasegment[0];
+									outputDatasegment[outputIndex++] = inputDatasegment[2];
 								} else if (restByteCount == 2) {
 									// Two bytes are taken from the previous array the third is from the new one
-									outputDatasegment[outputIndex++] = tmpByte1;
 									outputDatasegment[outputIndex++] = tmpByte2;
+									outputDatasegment[outputIndex++] = tmpByte1;
 									outputDatasegment[outputIndex++] = inputDatasegment[0];
 								} else if (restByteCount == 1) {
 									// One byte is taken from the previous array, the 2nd and 3rd are from the new
 									// one
-									outputDatasegment[outputIndex++] = tmpByte1;
 									outputDatasegment[outputIndex++] = inputDatasegment[0];
+									outputDatasegment[outputIndex++] = tmpByte1;
 									outputDatasegment[outputIndex++] = inputDatasegment[1];
 								}
 							}
+
 							if (restByteCount == 3) {
 								inputIndex += 3;
 							} else if (restByteCount == 2) {
@@ -614,16 +680,22 @@ public class ConverterHelper {
 
 						if (equalPixels) {
 							if (inputIndex + 3 < inputDatasegment.length) {
-								// Series of equal pixels gets written
-								for (int j = 0; j < pixelCount; j++) {
-									// j times the same pixel gets written
-
-									// Writing the pixel data bytewise into the outputDatasegment
-									for (int k = 1; k < 4; k++) {
-										outputDatasegment[outputIndex++] = inputDatasegment[inputIndex + k];
+								if (decompress) {
+									// Series of equal pixels gets written
+									for (int j = 0; j < pixelCount; j++) {
+										// j times the same pixel gets written
+										// Writing the pixel data bytewise into the outputDatasegment
+										for (int k = 1; k < 4; k++) {
+											outputDatasegment[outputIndex++] = inputDatasegment[inputIndex + k];
+										}
 									}
-
+								} else {
+									outputDatasegment[outputIndex++] = controlByte;
+									outputDatasegment[outputIndex++] = inputDatasegment[inputIndex + 2];
+									outputDatasegment[outputIndex++] = inputDatasegment[inputIndex + 1];
+									outputDatasegment[outputIndex++] = inputDatasegment[inputIndex + 3];
 								}
+
 								// All equal pixels were written
 								pixelCount = 0;
 								restByteCount = 0;
@@ -642,6 +714,9 @@ public class ConverterHelper {
 							}
 							inputIndex += 4;
 						} else {
+							if (!decompress) {
+								outputDatasegment[outputIndex++] = controlByte;
+							}
 							// A set of raw pixels gets written
 							for (int j = 1; j <= pixelCount * 3; j++) {
 								// Writing the raw pixels bytewise
@@ -656,7 +731,7 @@ public class ConverterHelper {
 
 					// Write a line of the output image to the file
 					if (outputIndex == outputDatasegment.length) {
-						if (rgbConversion) {
+						if (rgbConversion && !decompress) {
 							outputDatasegment = convertRGB(outputDatasegment);
 						}
 						oStream.write(outputDatasegment);
@@ -673,7 +748,8 @@ public class ConverterHelper {
 			buffI.close();
 			oStream.close();
 		} catch (IOException e) {
-			throw new ImageHandlingException("Error reading from inputImage or writing into outputImage.", ErrorCodes.IO_ERROR);
+			throw new ImageHandlingException("Error reading from inputImage or writing into outputImage.",
+					ErrorCodes.IO_ERROR);
 		}
 	}
 
@@ -694,6 +770,7 @@ public class ConverterHelper {
 
 	/**
 	 * To write the header of an image into an already existing file.
+	 * 
 	 * @param image the image.
 	 */
 	public static void writeHeaderIntoFile(Image image) {
@@ -719,11 +796,14 @@ public class ConverterHelper {
 
 	/**
 	 * To copy the data segment of an input image to an output image.
-	 * @param inputImage the input image.
-	 * @param outputImage the output image.
-	 * @param rgbConversion <code>true</code> when the order of the pixels must be changed i.e. from TGA > PROPRA conversion
+	 * This method should only be called when both the input and the output image
+	 * are uncompressed.
+	 * @param inputImage    the input image.
+	 * @param outputImage   the output image.
+	 * @param rgbConversion <code>true</code> when the order of the pixels must be
+	 *                      changed i.e. from TGA > PROPRA conversion
 	 */
-	public static void copyImage(Image inputImage, Image outputImage, boolean rgbConversion) {
+	public static void copyImage(Image inputImage, Image outputImage) {
 		BufferedInputStream buffI = null;
 		FileOutputStream oStream = null;
 		int buffersize = inputImage.getWidth() * 3;
@@ -751,18 +831,16 @@ public class ConverterHelper {
 					}
 					inputDatasegment = tmp;
 				}
-				if (rgbConversion) {
-					convertRGB(inputDatasegment);
-				}
 				oStream.write(inputDatasegment);
 			}
 		} catch (IOException e) {
-			
+
 		}
 	}
 
 	/**
-	 * To calculate the greated common divider of two numbers.
+	 * To calculate the greatest common divider of two numbers.
+	 * 
 	 * @param number1
 	 * @param number2
 	 * @return the gcd of the two numbers.
@@ -781,6 +859,7 @@ public class ConverterHelper {
 
 	/**
 	 * To calculate the least common multiplier of two numbers.
+	 * 
 	 * @param number1
 	 * @param number2
 	 * @return the lcd of two numbers.
@@ -793,10 +872,11 @@ public class ConverterHelper {
 			return Math.abs(number1 * number2) / gcd;
 		}
 	}
-	
+
 	/**
-	 * To get the multiplier of a buffer size when decoding base-n files.
-	 * Useful when trying to use buffer sizes which are a multiple of 1024. 
+	 * To get the multiplier of a buffer size when decoding base-n files. Useful
+	 * when trying to use buffer sizes which are a multiple of 1024.
+	 * 
 	 * @param alphabet the decoding alphabet
 	 * @return the mutliplier
 	 */
@@ -804,7 +884,7 @@ public class ConverterHelper {
 		int outputByteLength = (int) (Math.log(alphabet.length()) / Math.log(2));
 		int outputPackageByteCount = lcm(8, outputByteLength) / 8;
 		int inputPackageByteCount = outputPackageByteCount * 8 / outputByteLength;
-		
+
 		return inputPackageByteCount;
 	}
 }

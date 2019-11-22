@@ -83,13 +83,13 @@ public class ImageConverter {
 			try {
 				// Handle file encoding/decoding
 				if(encode32 != null) {
-					ConverterHelper.baseCoder(inputImage, true, true, null);
+					ConverterHelper.baseCodeHandler(inputImage, true, true, null);
 				} else if (decode32 != null){
-					ConverterHelper.baseCoder(inputImage, false, true, null);
+					ConverterHelper.baseCodeHandler(inputImage, false, true, null);
 				} else if(encode_n != null) {					
-					ConverterHelper.baseCoder(inputImage, true, false, encode_n);
+					ConverterHelper.baseCodeHandler(inputImage, true, false, encode_n);
 				} else if (decode_n != null	 ) {
-					ConverterHelper.baseCoder(inputImage, false, false, null);
+					ConverterHelper.baseCodeHandler(inputImage, false, false, null);
 				}
 				System.out.println(" +++ Encoding/Decoding successful +++");
 			} catch (ImageHandlingException e) {

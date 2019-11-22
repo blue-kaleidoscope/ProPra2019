@@ -59,32 +59,32 @@ public class ConversionController {
 	 * To start the conversion process from the input image of this controller to the output image.
 	 * @throws ImageHandlingException An exception is thrown when the conversion cannot be performed.
 	 */
-	public void convert() throws ImageHandlingException {
+	public void convert() throws ImageHandlingException {		
 		
-		if(inputImage.getExtension().equals("tga") && outputImage.getExtension().equals("propra") ||
-				inputImage.getExtension().equals("propra") && outputImage.getExtension().equals("tga")) {
-			if(outputImage.getCompressionMode() == Image.UNCOMPRESSED) {
-				if(inputImage.getCompressionMode() == Image.UNCOMPRESSED) {
-					// TGA>PROPRA oder PROPRA>TGA
-					// UNC>UNC
-					ConverterHelper.convertTgaPropra(inputImage, outputImage, true);
-				} else {
-					// TGA>PROPRA oder PROPRA>TGA
-					// COMP>UNC
-					ConverterHelper.decompressRLE(inputImage, outputImage, true);
-				}
+		if(inputImage.getCompressionMode() == Image.UNCOMPRESSED && outputImage.getCompressionMode() == Image.RLE) {
+			ConverterHelper.convertAndCompress(inputImage, outputImage, true);
+		}
+		
+		if(inputImage.getCompressionMode() == Image.RLE && outputImage.getCompressionMode() == Image.RLE) {
+			if(inputImage.getExtension().equals(outputImage.getExtension())) {
+				ConverterHelper.copyImage(inputImage, outputImage);
 			} else {
-				if(inputImage.getCompressionMode() == Image.UNCOMPRESSED) {
-					// TGA>PROPRA oder PROPRA>TGA
-					// UNC>COMP
-					ConverterHelper.convertTgaPropra(inputImage, outputImage, true);
-				} else {
-					// TGA>PROPRA oder PROPRA>TGA
-					// COMP>COMP
-					ConverterHelper.copyImage(inputImage, outputImage, true);
-				}
+				ConverterHelper.handleCompressedImages(inputImage, outputImage, true, false);
 			}
 		}
+		
+		if(inputImage.getCompressionMode() == Image.RLE && outputImage.getCompressionMode() == Image.UNCOMPRESSED) {			
+			ConverterHelper.handleCompressedImages(inputImage, outputImage, 
+					!inputImage.getExtension().equals(outputImage.getExtension()), true);
+		}
+		
+		if(inputImage.getCompressionMode() == Image.UNCOMPRESSED && outputImage.getCompressionMode() == Image.UNCOMPRESSED) {
+			if(inputImage.getExtension().equals(outputImage.getExtension())) {
+				ConverterHelper.copyImage(inputImage, outputImage);
+			} else {
+				ConverterHelper.convertAndCompress(inputImage, outputImage, false);
+			}
+		}	
 		
 		outputImage.finalizeConversion();
 		System.out.println("Input image successfully converted.");
