@@ -1,6 +1,11 @@
-package propra.imageconverter;
+package propra.imageconverter.image;
 
 import java.io.File;
+
+import propra.imageconverter.error.ErrorCodes;
+import propra.imageconverter.error.ImageHandlingException;
+import propra.imageconverter.util.FileHandler;
+import propra.imageconverter.util.Util;
 
 /**
  * This class describes an image which can be handled by the ImageConverter.
@@ -13,15 +18,18 @@ public abstract class Image {
 	protected int[] header;
 	protected int width;
 	protected int height;
-	protected int compressionType;
+	protected int compressionDescriptionInHeader;
 	protected byte bitsPerPixel;
 	protected String fileExtension;
-	protected File file;
-	protected int compressionMode;	
+	protected FileHandler fileHandler;
+	protected CompressionType compressionMode;	
 
-	public static final int UNCOMPRESSED = 0;
-	public static final int RLE = 1;
-
+	public enum CompressionType {
+		UNCOMPRESSED,
+		RLE,
+		HUFFMAN
+	}
+	
 	protected int headerHeight;
 	protected int headerWidth;
 	protected int headerCompression;
@@ -37,40 +45,31 @@ public abstract class Image {
 	 *                                <code>Image</code> could not be created out of
 	 *                                the file.
 	 */
-	public Image(File file) throws ImageHandlingException {
-		if (file == null) {
+	public Image(FileHandler fileHandler) throws ImageHandlingException {
+		if (fileHandler == null) {
 			throw new ImageHandlingException(
 					"Invalid input file. Cannot create Image.", ErrorCodes.IO_ERROR);
 		}
-		this.file = file;		
+		this.fileHandler = fileHandler;		
 		setProperties();
 		
-		this.header = ConverterHelper.getHeaderFromFile(file, headerLength);
-		checkHeader();
-		System.out.println("Input image header information successfully checked: " + file.getPath());
+		byte[] header = fileHandler.readData(headerLength);
+		this.header = Util.byteArrayToIntArray(header);
+		checkHeader();		
 	}
 
-	public Image(File file, int compressionMode) throws ImageHandlingException {
-		if (file == null) {
+	public Image(FileHandler fileHandler, CompressionType compressionMode) throws ImageHandlingException {
+		if (fileHandler == null) {
 			throw new ImageHandlingException(
 					"Invalid output file. Cannot create Image.", ErrorCodes.IO_ERROR);
 		}
-		this.file = file;
+		this.fileHandler = fileHandler;
 		this.compressionMode = compressionMode;
 		setProperties();		
 		createHeader();
 	}
-
-	/**
-	 * To get the header of this <code>Image</code>.
-	 * 
-	 * @return the header information.
-	 */
-	public int[] getHeader() {
-		return header;
-	}
 	
-	public byte[] getByteHeader() {
+	public byte[] getHeader() {
 		byte[] byteHeader = new byte[header.length];
 		for (int i = 0; i < byteHeader.length; i++) {
 			byteHeader[i] = (byte) header[i];
@@ -79,7 +78,7 @@ public abstract class Image {
 	}
 
 	public String getPath() {
-		return this.file.getPath();
+		return fileHandler.getFilePath();
 	}
 
 	public int getWidth() {
@@ -95,10 +94,12 @@ public abstract class Image {
 	}
 
 	public File getFile() {
-		return this.file;
+		return fileHandler.getFile();
 	}
+	
+	public abstract long getImageDataLength();
 
-	public int getCompressionMode() {
+	public CompressionType getCompressionMode() {
 		return compressionMode;
 	}
 
@@ -117,7 +118,7 @@ public abstract class Image {
 	 * Call this method when file content needs to be prepared after an image conversion took place.
 	 * @throws ImageHandlingException when conversion could not be finalized.
 	 */
-	protected abstract void finalizeConversion() throws ImageHandlingException;
+	public abstract void finalizeConversion() throws ImageHandlingException;
 
 	/**
 	 * To define properties which are unique for this type of <code>Image</code>.
@@ -142,7 +143,7 @@ public abstract class Image {
 		if (width <= 0 || height <= 0) {
 			throw new ImageHandlingException("Source file corrupt. Invalid image dimensions.",
 					ErrorCodes.INVALID_HEADERDATA);
-		}		
+		}
 	}
 
 	/**
@@ -151,7 +152,7 @@ public abstract class Image {
 	 */
 	protected void createHeader() {
 		header = new int[headerLength];
-		header[headerCompression] = compressionType;
+		header[headerCompression] = (byte) compressionDescriptionInHeader;
 		header[headerBitsPerPixel] = bitsPerPixel;
 	}
 

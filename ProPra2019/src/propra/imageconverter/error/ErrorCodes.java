@@ -1,4 +1,4 @@
-package propra.imageconverter;
+package propra.imageconverter.error;
 
 /**
  * Error codes when using ImageConverter.
@@ -13,13 +13,14 @@ public enum ErrorCodes {
 	INVALID_CHECKSUM(5),
 	IO_ERROR(6),
 	INVALID_FILE(7),
-	INVALID_COMPRESSION(8);
+	INVALID_COMPRESSION(8),
+	INVALID_USER_INPUT(9);
 	
 	
 	private int errorCode;
 	
 	ErrorCodes(int errorCode) {
-		this.errorCode = errorCode;
+		this.errorCode = errorCode;		
 	}
 	
 	public int getErrorCode() {

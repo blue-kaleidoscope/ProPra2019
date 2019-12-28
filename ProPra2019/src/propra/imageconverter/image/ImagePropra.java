@@ -1,10 +1,12 @@
-package propra.imageconverter;
+package propra.imageconverter.image;
 
-import java.io.File;
+import propra.imageconverter.error.ErrorCodes;
+import propra.imageconverter.error.ImageHandlingException;
+import propra.imageconverter.util.ChecksumCalculator;
+import propra.imageconverter.util.FileHandler;
 
 public class ImagePropra extends Image {
 	private final String HEADER_TEXT = "ProPraWS19";
-	private long dataLength;
 
 	/**
 	 * Creates a new <code>ImagePropra</code> for an existing propra image file
@@ -17,20 +19,12 @@ public class ImagePropra extends Image {
 	 *                                <code>ImagePropra</code> could not be created
 	 *                                out of the file.
 	 */
-	public ImagePropra(File file) throws ImageHandlingException {
-		super(file);
+	public ImagePropra(FileHandler fileHandler) throws ImageHandlingException {
+		super(fileHandler);
 	}
 
-	public ImagePropra(File file, int compressionMode) throws ImageHandlingException {
-		super(file, compressionMode);
-	}
-	
-	/**
-	 * To set the length of the data segment this PROPRA image.
-	 * @param dataLength the data segment's length
-	 */
-	public void setDataLength(long dataLength) {
-		this.dataLength = dataLength;
+	public ImagePropra(FileHandler fileHandler, CompressionType compressionMode) throws ImageHandlingException {
+		super(fileHandler, compressionMode);
 	}
 
 	@Override
@@ -38,10 +32,12 @@ public class ImagePropra extends Image {
 		headerLength = 28;
 		bitsPerPixel = 24;
 		fileExtension = "propra";
-		if(compressionMode == UNCOMPRESSED) {
-			compressionType = 0;
-		} else {
-			compressionType = 1;
+		if(compressionMode == CompressionType.UNCOMPRESSED) {
+			compressionDescriptionInHeader = 0;
+		} else if(compressionMode == CompressionType.RLE) {
+			compressionDescriptionInHeader = 1;
+		} else if(compressionMode == CompressionType.HUFFMAN) {
+			compressionDescriptionInHeader = 2;
 		}
 
 		headerWidth = 10;
@@ -55,19 +51,21 @@ public class ImagePropra extends Image {
 		super.checkHeader();
 
 		// Get compression type of this input image from header
-		compressionType = header[headerCompression];
+		compressionDescriptionInHeader = header[headerCompression];
 
 		// Check if compression type is valid.
-		if (compressionType == 0) {
-			compressionMode = UNCOMPRESSED;
-		} else if (compressionType == 1) {
-			compressionMode = RLE;
+		if (compressionDescriptionInHeader == 0) {
+			compressionMode = CompressionType.UNCOMPRESSED;
+		} else if (compressionDescriptionInHeader == 1) {
+			compressionMode = CompressionType.RLE;			
+		}  else if (compressionDescriptionInHeader == 2) {
+			compressionMode = CompressionType.HUFFMAN;
 		} else {
 			throw new ImageHandlingException("Invalid compression of source file.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
 		// Check if actual image data length fits to dimensions given in the header.
-		if (file.length() - headerLength != height * width * 3 && compressionMode == Image.UNCOMPRESSED) {
+		if (fileHandler.getFile().length() - headerLength < height * width * 3 && compressionMode == CompressionType.UNCOMPRESSED) {
 			throw new ImageHandlingException(
 					"Source file corrupt. Image data length does not fit to header information.",
 					ErrorCodes.INVALID_HEADERDATA);
@@ -81,7 +79,7 @@ public class ImagePropra extends Image {
 		long dataLength = header[16] + (header[17] << 8) + (header[18] << 16) + (header[19] << 24) + (header[20] << 32)
 				+ (header[21] << 40) + (header[22] << 48) + (header[23] << 56);
 		// Compare the size of the data segment with the image dimensions
-		if (dataLength != width * height * 3 && this.compressionMode == Image.UNCOMPRESSED) {
+		if (dataLength != width * height * 3 && this.compressionMode == CompressionType.UNCOMPRESSED) {
 			throw new ImageHandlingException("Source file corrupt. Invalid image size information in header.",
 					ErrorCodes.INVALID_HEADERDATA);
 		}
@@ -90,7 +88,7 @@ public class ImagePropra extends Image {
 		 * Check if length of data segment from header and actual length of data segment
 		 * are equal.
 		 */
-		if (dataLength != file.length() - headerLength) {
+		if (dataLength != fileHandler.getFile().length() - headerLength) {
 			throw new ImageHandlingException("Source file corrupt. Invalid image data length information in header.",
 					ErrorCodes.INVALID_HEADERDATA);
 		}
@@ -99,9 +97,10 @@ public class ImagePropra extends Image {
 		 * Check for valid checksum.
 		 */
 		// Compare the actual checksum with the checksum from the header
-		byte[] checkSum = ConverterHelper.getCheckSum(file, header.length);
+		ChecksumCalculator checksumCalc = new ChecksumCalculator(new FileHandler(this.getPath()));
+		byte[] checkSum = checksumCalc.getCheckSum(headerLength);
 		for (int i = 0; i < 4; i++) {
-			if ((checkSum[i] & 0xFF) != header[24 + i]) {
+			if (Byte.toUnsignedInt((checkSum[i])) != header[24 + i]) {
 				throw new ImageHandlingException("Source file corrupt. Invalid check sum.",
 						ErrorCodes.INVALID_CHECKSUM);
 			}
@@ -125,10 +124,10 @@ public class ImagePropra extends Image {
 		 * Write the length of the data segment into the header (little-endian).
 		 */
 		long sizeOfDataSegment = 0; 
-		if(compressionMode == Image.UNCOMPRESSED) {
+		if(compressionMode == CompressionType.UNCOMPRESSED) {
 			sizeOfDataSegment = width * height * 3;
 		} else {
-			sizeOfDataSegment = dataLength;
+			sizeOfDataSegment = fileHandler.getFile().length() - headerLength;
 		}
 		header[16] = (byte) sizeOfDataSegment;
 		header[17] = (byte) (sizeOfDataSegment >> 8);
@@ -142,11 +141,21 @@ public class ImagePropra extends Image {
 		/*
 		 * Write check sum into the header (little-endian).
 		 */
-		byte[] checkSum = ConverterHelper.getCheckSum(file, header.length);
+		ChecksumCalculator checksumCalc = new ChecksumCalculator(new FileHandler(this.getPath()));
+		byte[] checkSum = checksumCalc.getCheckSum(headerLength);
 		for (int i = 0; i < checkSum.length; i++) {
 			header[24 + i] = checkSum[i];
 		}
 
-		ConverterHelper.writeHeaderIntoFile(this);
+		fileHandler.writeDataIntoFile(checkSum, 24);
+	}
+
+	@Override
+	public long getImageDataLength() {
+		if(compressionMode == CompressionType.UNCOMPRESSED) {
+			return width * height * 3;
+		} else {
+			return fileHandler.getFile().length() - headerLength;
+		}
 	}
 }

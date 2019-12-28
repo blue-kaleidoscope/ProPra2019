@@ -1,6 +1,8 @@
-package propra.imageconverter;
+package propra.imageconverter.image;
 
-import java.io.File;
+import propra.imageconverter.error.ErrorCodes;
+import propra.imageconverter.error.ImageHandlingException;
+import propra.imageconverter.util.FileHandler;
 
 public class ImageTGA extends Image {
 	private byte origin;
@@ -18,12 +20,12 @@ public class ImageTGA extends Image {
 	 *                                <code>ImageTGA</code> could not be created out
 	 *                                of the file.
 	 */
-	public ImageTGA(File file) throws ImageHandlingException {
-		super(file);
+	public ImageTGA(FileHandler fileHandler) throws ImageHandlingException {
+		super(fileHandler);
 	}
 
-	public ImageTGA(File file, int compressionMode) throws ImageHandlingException {
-		super(file, compressionMode);
+	public ImageTGA(FileHandler fileHandler, CompressionType compressionMode) throws ImageHandlingException {
+		super(fileHandler, compressionMode);
 	}
 
 	@Override
@@ -32,10 +34,10 @@ public class ImageTGA extends Image {
 		bitsPerPixel = 24;
 		origin = 32; // origin top-left
 		fileExtension = "tga";
-		if(compressionMode == UNCOMPRESSED) {
-			compressionType = 2;
-		} else {
-			compressionType = 10;
+		if(compressionMode == CompressionType.UNCOMPRESSED) {
+			compressionDescriptionInHeader = 2;
+		} else if(compressionMode == CompressionType.RLE) {
+			compressionDescriptionInHeader = 10;
 		}
 		
 		headerWidth = 12;
@@ -56,30 +58,32 @@ public class ImageTGA extends Image {
 		super.checkHeader();
 		
 		// Get compression type of this input image from header
-		compressionType = header[headerCompression];
+		compressionDescriptionInHeader = header[headerCompression];
 
 		// Check if compression type is valid.
-		if (compressionType == 2) {
-			compressionMode = UNCOMPRESSED;
-		} else if (compressionType == 10) {
-			compressionMode = RLE;
+		if (compressionDescriptionInHeader == 2) {
+			compressionMode = CompressionType.UNCOMPRESSED;
+		} else if (compressionDescriptionInHeader == 10) {
+			compressionMode = CompressionType.RLE;
 		} else {
 			throw new ImageHandlingException("Invalid compression of source file.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
 		// Check if actual image data length fits to dimensions given in the header.
-		if (file.length() - headerLength != height * width * 3 && compressionMode == Image.UNCOMPRESSED) {
+		if (fileHandler.getFile().length() - headerLength < height * width * 3 && compressionMode == CompressionType.UNCOMPRESSED) {
 			throw new ImageHandlingException(
 					"Source file corrupt. Image data length does not fit to header information.",
 					ErrorCodes.INVALID_HEADERDATA);
 		}
-
-		
-
 	}
 
 	@Override
-	protected void finalizeConversion() throws ImageHandlingException {
+	public void finalizeConversion() throws ImageHandlingException {
 		// Nothing to do here for TGA images.		
+	}
+
+	@Override
+	public long getImageDataLength() {
+		return height * width * 3;
 	}
 }

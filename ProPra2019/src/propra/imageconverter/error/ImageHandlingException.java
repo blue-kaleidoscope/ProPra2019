@@ -1,4 +1,4 @@
-package propra.imageconverter;
+package propra.imageconverter.error;
 
 public class ImageHandlingException extends Exception {
 	
@@ -9,6 +9,7 @@ public class ImageHandlingException extends Exception {
 	public ImageHandlingException(String msg, ErrorCodes errorCode) {
 		super(msg + " Error code: " + errorCode.getErrorCode());
 		this.errorCode = errorCode.getErrorCode();
+		System.out.println(" +++ ImageConverter was shut down with errors +++");
 	}
 	
 	public Integer getErrorCode() {
