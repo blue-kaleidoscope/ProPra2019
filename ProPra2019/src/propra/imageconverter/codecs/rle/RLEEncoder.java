@@ -89,7 +89,7 @@ public class RLEEncoder extends Encoder {
 			throw new ImageHandlingException(
 					"Not enough bytes were given in order to perform RLE encoding. Missing number of bytes: "
 							+ (lineLength - currentLine.size()),
-					ErrorCodes.INVALID_COMPRESSION);
+					ErrorCodes.COMPRESSION_ERROR);
 		}
 		return null;
 	}
@@ -119,7 +119,7 @@ public class RLEEncoder extends Encoder {
 		}
 
 		if (currentLine.size() > 0) {
-			throw new ImageHandlingException("An error occured during RLE encoding.", ErrorCodes.INVALID_COMPRESSION);
+			throw new ImageHandlingException("An error occured during RLE encoding.", ErrorCodes.COMPRESSION_ERROR);
 		}
 
 		return null;
@@ -128,7 +128,7 @@ public class RLEEncoder extends Encoder {
 	private boolean equals(List<Byte> pixel1, List<Byte> pixel2) throws ImageHandlingException {
 		if (pixel1.size() != 3 || pixel2.size() != 3) {
 			throw new ImageHandlingException("An error occured during RLE encoding. Could not compare two pixels.",
-					ErrorCodes.INVALID_COMPRESSION);
+					ErrorCodes.COMPRESSION_ERROR);
 		}
 
 		boolean pixelsEqual = true;
@@ -154,5 +154,11 @@ public class RLEEncoder extends Encoder {
 	@Override
 	public void prepareEncoding(byte[] inputData) throws ImageHandlingException {
 		// Nothing to do here
+	}
+
+	@Override
+	public void reset() {
+		encodedData.clear();
+		currentLine.clear();
 	}
 }

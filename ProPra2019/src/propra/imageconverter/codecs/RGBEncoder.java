@@ -60,4 +60,10 @@ public class RGBEncoder extends Encoder {
 		// Nothing to do here...
 		
 	}
+	@Override
+	public void reset() {
+		encodedData.clear();
+		remainingBytes.clear();
+		encodingState = ENCODING_STATES.FINISHED;
+	}
 }

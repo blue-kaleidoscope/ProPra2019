@@ -56,5 +56,10 @@ public abstract class Encoder {
 	public abstract byte[] encode(byte[] inputData) throws ImageHandlingException;
 
 	public abstract byte[] flush() throws ImageHandlingException;
+	
+	/**
+	 * To reset this <code>Encoder</code> and prepare it for a new conversion.
+	 */
+	public abstract void reset();
 
 }

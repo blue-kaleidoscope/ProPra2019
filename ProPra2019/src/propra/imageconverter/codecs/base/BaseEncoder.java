@@ -174,4 +174,10 @@ public class BaseEncoder extends Encoder {
 	public void prepareEncoding(byte[] inputData) throws ImageHandlingException {
 		//Nothing to do here...		
 	}
+
+	@Override
+	public void reset() {
+		remainingBytes.clear();
+		encodedData.clear();
+	}
 }

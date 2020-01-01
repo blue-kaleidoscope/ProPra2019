@@ -60,7 +60,7 @@ public class HuffmanTree {
 			getCode(root.getRightChild(), "1");
 		} else {
 			throw new ImageHandlingException("Huffman-Tree not built yet. Cannot create code table.",
-					ErrorCodes.INVALID_COMPRESSION);
+					ErrorCodes.COMPRESSION_ERROR);
 		}
 	}
 

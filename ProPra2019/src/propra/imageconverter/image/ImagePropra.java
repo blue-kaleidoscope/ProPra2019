@@ -118,6 +118,18 @@ public class ImagePropra extends Image {
 			throw new ImageHandlingException("Source file corrupt. Invalid image data length information in header.",
 					ErrorCodes.INVALID_HEADERDATA);
 		}
+		
+		/*
+		 * Check for the "ProPraWS19" header entry.
+		 */
+		byte[] proPraBytes = HEADER_TEXT.getBytes();
+		for (int i = 0; i < HEADER_TEXT.length(); i++) {
+			if (header[i] != Byte.toUnsignedInt(proPraBytes[i])) {
+				throw new ImageHandlingException("Source file is not a valid *.propra file. Header corrupt.",
+						ErrorCodes.INVALID_HEADERDATA);
+			}
+		}
+		
 
 		/*
 		 * Check for valid checksum.
@@ -173,7 +185,7 @@ public class ImagePropra extends Image {
 			header[24 + i] = checkSum[i];
 		}
 
-		fileHandler.writeDataIntoFile(getHeader(), 0);
+		fileHandler.writeDataRandomlyIntoFile(getHeader(), 0);
 	}
 
 	@Override

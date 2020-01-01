@@ -164,7 +164,7 @@ public class FileHandler {
 	 * 0 if the data should be written at the beginning of the file.
 	 * @throws ImageHandlingException 
 	 */
-	public void writeDataIntoFile(byte[] inputData, int offset) throws ImageHandlingException {
+	public void writeDataRandomlyIntoFile(byte[] inputData, int offset) throws ImageHandlingException {
 		RandomAccessFile raf = null;
 		try {
 			raf = new RandomAccessFile(file, "rw");
@@ -184,10 +184,6 @@ public class FileHandler {
 					"Error while closing file: " + filePath,
 					ErrorCodes.IO_ERROR);
 		}
-	}
-	
-	public void skipFirstLine() throws ImageHandlingException {
-		skipNBytes(readFirstLine().length() + 1);
 	}
 	
 	public void skipNBytes(long n) throws ImageHandlingException {

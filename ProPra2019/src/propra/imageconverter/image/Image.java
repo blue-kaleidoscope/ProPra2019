@@ -61,7 +61,7 @@ public abstract class Image {
 		
 		if(compressionFormat == CompressionFormat.AUTO) {
 			throw new ImageHandlingException(
-					"'auto' is not allowed as an output compression format.", ErrorCodes.INVALID_ARGUMENT); 
+					"'auto' is not allowed as an output compression format.", ErrorCodes.UNEXPECTED_ERROR); 
 		}
 		
 		
@@ -139,7 +139,12 @@ public abstract class Image {
 	 *                                information does not fit to this type of
 	 *                                <code>Image</code>.
 	 */
-	protected void checkHeader() throws ImageHandlingException {			
+	protected void checkHeader() throws ImageHandlingException {
+		
+		if(header[headerBitsPerPixel] != 24) {
+			throw new ImageHandlingException("Source file corrupt. Invalid bit depth. This program currently only allows 24 bit images.",
+					ErrorCodes.INVALID_HEADERDATA);
+		}
 
 		// Get source image dimensions from header.
 		width = (header[headerWidth + 1] << 8) + header[headerWidth];

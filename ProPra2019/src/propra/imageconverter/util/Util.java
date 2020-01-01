@@ -18,17 +18,6 @@ public class Util {
 		return byteArray;
 	}
 
-	/*
-	 * private static byte reverseBits(byte input) { byte reversedInput = 0;
-	 * 
-	 * for(int i = 0; i < 8; i++) { reversedInput = (byte) ((reversedInput << 1) |
-	 * (input & 1)); input >>= 1; } return reversedInput; }
-	 * 
-	 * public static byte[] reverseBitsOfBytes(byte[] input) { byte[] output = new
-	 * byte[input.length]; for(int i = 0; i < input.length; i ++) { output[i] =
-	 * reverseBits(input[i]); } return output; }
-	 */
-
 	public static char[] byteArrayToCharArray(byte[] input) {
 		char[] inputAsCharArray = new char[8 * input.length];
 		for (int j = 0; j < input.length; j++) {
@@ -113,20 +102,6 @@ public class Util {
 		return output;
 	}
 	
-	public static byte getNextByte(List<Character> input) throws ImageHandlingException {
-		int byteLength = 8;
-		if(input.size() < 8) {
-			byteLength = input.size();
-		}
-		
-		char[] inputAsChar = new char[8];
-		for(int i = 0; i < byteLength; i++) {
-			inputAsChar[i] = input.remove(i);
-		}
-		
-		return charArrayToByte(inputAsChar);
-	}
-	
 	public static int[] byteArrayToIntArray(byte[] input) {
 		int[] output = new int[input.length];
 		for(int i = 0; i < input.length; i ++) {
@@ -149,28 +124,6 @@ public class Util {
 		for(int i = 0; i < input.size(); i++) {
 			output[i] = input.get(i);			
 		}
-		return output;
-	}
-	
-	public static List<Byte> charListToByteList(List<Character> input) throws ImageHandlingException {
-		List<Byte> output = new ArrayList<Byte>();
-		int outputByteCount = input.size() / 8;
-		if(input.size() % 8 != 0) {
-			outputByteCount++;
-		}
-		for(int i = 0; i < outputByteCount; i++) {			
-			char[] currentByteAsChar = new char[8]; 
-			for(int j = 0; j < 8; j++) {
-				if(input.size() > 0) {
-					currentByteAsChar[j] = input.remove(0);	
-				} else {
-					// Bit stream has finished. Fill up with padding bits.
-					currentByteAsChar[j] = '0';
-				}				
-			}			
-			output.add(Util.charArrayToByte(currentByteAsChar));
-		}
-		
 		return output;
 	}
 	
@@ -207,16 +160,5 @@ public class Util {
 			int gcd = gcd(number1, number2);
 			return Math.abs(number1 * number2) / gcd;
 		}
-	}
-
-	public static void main(String[] args) throws ImageHandlingException {
-		byte[] input = { 0x3 };
-		char[] inChars = byteArrayToCharArray(input);
-		System.out.println(inChars);
-		System.out.println(charArrayToByte(inChars));
-		/*
-		 * char[] first = {'1', '1'}; char[] second= {'0','0', '0', '0', '0', '0'};
-		 * System.out.println(charArrayToByte(mergeCharArrays(first, second)));
-		 */
 	}
 }
