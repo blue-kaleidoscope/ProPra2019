@@ -16,6 +16,9 @@ public abstract class Decoder {
 	 */
 	protected List<Byte> decodedData;
 	
+	protected long alreadyDecodedBytes;
+	protected long byteCount;
+	
 	/**
 	 * States this decoder can have. Either it is waiting for header data or for data which should be decoded.
 	 * @author Oliver Eckstein
@@ -27,12 +30,18 @@ public abstract class Decoder {
 		FINISHED
 	}
 	
-	/**
-	 * To create a new <code>Decoder</code>.
-	 */
 	public Decoder() {
 		decodingState = DECODING_STATES.WAITING_FOR_HEADER_DATA;
 		decodedData = new ArrayList<Byte>();
+		alreadyDecodedBytes = 0;
+	}
+	
+	/**
+	 * To create a new <code>Decoder</code>.
+	 */
+	public Decoder(long byteCount) {
+		this();
+		this.byteCount = byteCount;		
 	}
 	
 	/**

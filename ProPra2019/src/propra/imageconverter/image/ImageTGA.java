@@ -3,6 +3,7 @@ package propra.imageconverter.image;
 import propra.imageconverter.error.ErrorCodes;
 import propra.imageconverter.error.ImageHandlingException;
 import propra.imageconverter.util.FileHandler;
+import propra.imageconverter.util.arguments.CompressionFormat;
 
 public class ImageTGA extends Image {
 	private byte origin;
@@ -24,7 +25,7 @@ public class ImageTGA extends Image {
 		super(fileHandler);
 	}
 
-	public ImageTGA(FileHandler fileHandler, CompressionType compressionMode) throws ImageHandlingException {
+	public ImageTGA(FileHandler fileHandler, CompressionFormat compressionMode) throws ImageHandlingException {
 		super(fileHandler, compressionMode);
 	}
 
@@ -34,9 +35,9 @@ public class ImageTGA extends Image {
 		bitsPerPixel = 24;
 		origin = 32; // origin top-left
 		fileExtension = "tga";
-		if(compressionMode == CompressionType.UNCOMPRESSED) {
+		if(compressionFormat == CompressionFormat.UNCOMPRESSED) {
 			compressionDescriptionInHeader = 2;
-		} else if(compressionMode == CompressionType.RLE) {
+		} else if(compressionFormat == CompressionFormat.RLE) {
 			compressionDescriptionInHeader = 10;
 		}
 		
@@ -62,15 +63,15 @@ public class ImageTGA extends Image {
 
 		// Check if compression type is valid.
 		if (compressionDescriptionInHeader == 2) {
-			compressionMode = CompressionType.UNCOMPRESSED;
+			compressionFormat = CompressionFormat.UNCOMPRESSED;
 		} else if (compressionDescriptionInHeader == 10) {
-			compressionMode = CompressionType.RLE;
+			compressionFormat = CompressionFormat.RLE;
 		} else {
 			throw new ImageHandlingException("Invalid compression of source file.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
 		// Check if actual image data length fits to dimensions given in the header.
-		if (fileHandler.getFile().length() - headerLength < height * width * 3 && compressionMode == CompressionType.UNCOMPRESSED) {
+		if (fileHandler.getFile().length() - headerLength < height * width * 3 && compressionFormat == CompressionFormat.UNCOMPRESSED) {
 			throw new ImageHandlingException(
 					"Source file corrupt. Image data length does not fit to header information.",
 					ErrorCodes.INVALID_HEADERDATA);

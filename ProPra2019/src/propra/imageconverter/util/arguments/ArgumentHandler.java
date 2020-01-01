@@ -2,11 +2,6 @@ package propra.imageconverter.util.arguments;
 
 import propra.imageconverter.error.ErrorCodes;
 import propra.imageconverter.error.ImageHandlingException;
-import propra.imageconverter.image.Image;
-import propra.imageconverter.image.ImagePropra;
-import propra.imageconverter.image.ImageTGA;
-import propra.imageconverter.image.Image.CompressionType;
-import propra.imageconverter.util.FileHandler;
 
 public class ArgumentHandler {
 
@@ -23,11 +18,14 @@ public class ArgumentHandler {
 	private static final String COMP_UNC = "uncompressed";
 	private static final String COMP_RLE = "rle";
 	private static final String COMP_HUF = "huffman";
+	private static final String COMP_AUTO = "auto";
 
 	private String inputPath;
 	private String outputPath;
 	private ConverterOperationMode operationMode;
-	private ConverterCompressionOperation compressionOperation;
+	private Format inputFormat;
+	private Format outputFormat;
+	private CompressionFormat outputCompressionFormat;
 	private String encodingAlphabet;
 
 	private String[] args;
@@ -41,7 +39,7 @@ public class ArgumentHandler {
 	private void checkArguments() throws ImageHandlingException {
 		if (args.length < 2 || args.length > 3) {
 			throw new ImageHandlingException("Wrong number of arguments specified.", ErrorCodes.INVALID_USER_INPUT);
-		}
+		}		
 
 		// Let's find out which arguments the user has specified
 		String inputPath = findCommand(args, INPUT, true);
@@ -60,10 +58,6 @@ public class ArgumentHandler {
 		} else {
 			this.inputPath = inputPath;
 		}
-		
-		FileHandler inputHandler = new FileHandler(inputPath);
-		inputHandler.createFile();
-		inputHandler.openInputFile();
 
 		if (outputPath == null) {
 			// This is only allowed in case a base-coding operation should be performed
@@ -89,8 +83,7 @@ public class ArgumentHandler {
 			if (decode_n != null) {
 				fileExtensionIsCorrect = inputPath.contains(".base-n");
 				this.outputPath = inputPath.replace(".base-n", "");
-				operationMode = ConverterOperationMode.DECODE_BASEN;
-				this.encodingAlphabet = inputHandler.readFirstLine();
+				operationMode = ConverterOperationMode.DECODE_BASEN;				
 			}
 			
 			if(!fileExtensionIsCorrect && (decode_n != null || decode32 != null)) {
@@ -118,78 +111,63 @@ public class ArgumentHandler {
 			this.outputPath = outputPath;
 			String inputExtension = getFileExtension(inputPath);
 			String outputExtension = getFileExtension(outputPath);
-			Image inputImage; //inputImage is needed in order to get the source image's compression type.
-
+			operationMode = ConverterOperationMode.CONVERT;
 			/*
 			 * Now there are two possibilities: Either the user uses the ImageConverter
 			 * according to KE1 specifications: Only --input=... and --output=... are set or
 			 * according to KE2 or later including --compression=...
 			 */			
 			if (inputExtension.equals(EXT_TGA)) {
-				inputImage = new ImageTGA(inputHandler);
-				if (outputExtension.equals(EXT_TGA)) {
-					operationMode = ConverterOperationMode.TGA_TO_TGA;
-				} else if (outputExtension.equals(EXT_PROPRA)) {
-					operationMode = ConverterOperationMode.TGA_TO_PROPRA;
-				} else {
-					throw new ImageHandlingException(
-							"Output format unknown. Currently only *.tga or *.propra files allowed for image conversion operations.",
-							ErrorCodes.INVALID_USER_INPUT);
-				}
+				inputFormat = Format.TGA;
 			} else if (inputExtension.equals(EXT_PROPRA)) {
-				inputImage = new ImagePropra(inputHandler);
-				if (outputExtension.equals(EXT_PROPRA)) {
-					operationMode = ConverterOperationMode.PROPRA_TO_PROPRA;
-				} else if (outputExtension.equals(EXT_TGA)) {
-					operationMode = ConverterOperationMode.PROPRA_TO_TGA;
-				} else {
-					throw new ImageHandlingException(
-							"Output format unknown. Currently only *.tga or *.propra files allowed for image conversion operations.",
-							ErrorCodes.INVALID_USER_INPUT);
-				}
+				inputFormat = Format.PROPRA;
 			} else {
 				throw new ImageHandlingException(
 						"Input format unknown. Currently only *.tga or *.propra files allowed for image conversion operations.",
 						ErrorCodes.INVALID_USER_INPUT);
 			}
 			
+			if (outputExtension.equals(EXT_TGA)) {
+				outputFormat = Format.TGA;				
+			} else if (outputExtension.equals(EXT_PROPRA)) {				
+				outputFormat = Format.PROPRA;
+			} else {
+				throw new ImageHandlingException(
+						"Output format unknown. Currently only *.tga or *.propra files allowed for image conversion operations.",
+						ErrorCodes.INVALID_USER_INPUT);
+			}
+			
 			if (targetCompression == null) {
 				// KE1
-				compressionOperation = ConverterCompressionOperation.UNCOMPRESSED_TO_UNCOMPRESSED;
+				outputCompressionFormat = CompressionFormat.UNCOMPRESSED;
 			} else {
-				// KE2 and later
-				CompressionType inputCompressionType = inputImage.getCompressionMode();			
+				// KE2 and later				
 				if(targetCompression.equals(COMP_UNC)) {
-					if (inputCompressionType == CompressionType.UNCOMPRESSED) {
-						compressionOperation = ConverterCompressionOperation.UNCOMPRESSED_TO_UNCOMPRESSED;
-					} else if (inputCompressionType == CompressionType.RLE) {
-						compressionOperation = ConverterCompressionOperation.RLE_TO_UNCOMPRESSED;
-					} else if (inputCompressionType == CompressionType.HUFFMAN) {
-						compressionOperation = ConverterCompressionOperation.HUFFMAN_TO_UNCOMPRESSED;
-					}					
+					outputCompressionFormat = CompressionFormat.UNCOMPRESSED;					
 				} else if(targetCompression.equals(COMP_RLE)) {
-					if (inputCompressionType == CompressionType.UNCOMPRESSED) {
-						compressionOperation = ConverterCompressionOperation.UNCOMPRESSED_TO_RLE;
-					} else if (inputCompressionType == CompressionType.RLE) {
-						compressionOperation = ConverterCompressionOperation.RLE_TO_RLE;
-					} else if (inputCompressionType == CompressionType.HUFFMAN) {
-						compressionOperation = ConverterCompressionOperation.HUFFMAN_TO_RLE;
-					}					
+					outputCompressionFormat = CompressionFormat.RLE;					
 				} else if(targetCompression.equals(COMP_HUF)) {
-					if (inputCompressionType == CompressionType.UNCOMPRESSED) {
-						compressionOperation = ConverterCompressionOperation.UNCOMPRESSED_TO_HUFFMAN;
-					} else if (inputCompressionType == CompressionType.RLE) {
-						compressionOperation = ConverterCompressionOperation.RLE_TO_HUFFMAN;
-					} else if (inputCompressionType == CompressionType.HUFFMAN) {
-						compressionOperation = ConverterCompressionOperation.HUFFMAN_TO_HUFFMAN;
+					if(outputFormat == Format.PROPRA) {
+						outputCompressionFormat = CompressionFormat.HUFFMAN;	
+					} else {
+						throw new ImageHandlingException(
+								"Huffman encoding currently only valid if encoding to *.propra file.",
+								ErrorCodes.INVALID_USER_INPUT);
+					}					
+				} else if(targetCompression.equals(COMP_AUTO)) {
+					if(outputFormat == Format.PROPRA) {
+						outputCompressionFormat = CompressionFormat.AUTO;	
+					} else {
+						throw new ImageHandlingException(
+								"Auto compression setting currently only valid if encoding to *.propra file.",
+								ErrorCodes.INVALID_USER_INPUT);
 					}					
 				} else {
 					throw new ImageHandlingException(
-							"Compression type unknown. Currently only uncompressed, rle or huffman are allowed.",
+							"Compression type unknown. Currently only 'uncompressed', 'rle', 'huffman' or 'auto' are allowed.",
 							ErrorCodes.INVALID_USER_INPUT);
 				}
-			}			
-			inputHandler.closeFile();			
+			}					
 		}
 	}
 
@@ -204,9 +182,17 @@ public class ArgumentHandler {
 	public ConverterOperationMode getConverterOperationMode() {
 		return operationMode;
 	}
-
-	public ConverterCompressionOperation getCompressionOperationMode() {
-		return compressionOperation;
+	
+	public Format getInputFormat() {
+		return inputFormat;
+	}
+	
+	public Format getOutputFormat() {
+		return outputFormat;
+	}
+	
+	public CompressionFormat getOutputCompressionFormat() {
+		return outputCompressionFormat;
 	}
 
 	public String getEncodingAlphabet() {
@@ -226,6 +212,10 @@ public class ArgumentHandler {
 		String foundCommand = null;
 		for (int i = 0; i < args.length; i++) {
 			String currentString = args[i];
+			if(currentString == null) {
+				throw new ImageHandlingException("Null input not allowed!",
+						ErrorCodes.INVALID_USER_INPUT);
+			}
 			if (currentString.startsWith(commandToFind)) {
 				if (foundCommand == null) {
 					if(replaceCommand) {

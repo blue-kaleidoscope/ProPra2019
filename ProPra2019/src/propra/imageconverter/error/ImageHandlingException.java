@@ -7,8 +7,10 @@ public class ImageHandlingException extends Exception {
 	private static final long serialVersionUID = 1L;
 	
 	public ImageHandlingException(String msg, ErrorCodes errorCode) {
-		super(msg + " Error code: " + errorCode.getErrorCode());
+		//super(msg + " Error code: " + errorCode.getErrorCode());
 		this.errorCode = errorCode.getErrorCode();
+		System.err.println(msg + " Error code: " + errorCode.getErrorCode());
+		this.printStackTrace();
 		System.out.println(" +++ ImageConverter was shut down with errors +++");
 	}
 	

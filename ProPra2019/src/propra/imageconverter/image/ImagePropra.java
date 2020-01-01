@@ -4,6 +4,7 @@ import propra.imageconverter.error.ErrorCodes;
 import propra.imageconverter.error.ImageHandlingException;
 import propra.imageconverter.util.ChecksumCalculator;
 import propra.imageconverter.util.FileHandler;
+import propra.imageconverter.util.arguments.CompressionFormat;
 
 public class ImagePropra extends Image {
 	private final String HEADER_TEXT = "ProPraWS19";
@@ -14,6 +15,31 @@ public class ImagePropra extends Image {
 	 * yet existing image files (such as output image files before a conversion took
 	 * place).
 	 * 
+	 * Specification (German):<br><code>
+	 * -------------------------------------------------------------------------------------------------------------------------------------<br>
+	 * | Element                        | Datengröße       | Beschreibung                                                                  |<br>
+	 * |--------------------------------|------------------|-------------------------------------------------------------------------------|<br>
+	 * |           | Formatkennung      | 10 Bytes         | Datei beginnt immer mit der Zeichenfolge "ProPraWS19"                         |<br>
+	 * |           |--------------------|------------------|-------------------------------------------------------------------------------|<br>
+	 * |           | Bildbreite         | 2 Bytes          | Anzahl Bildpunkte pro Zeile (vorzeichenloses 16 Bit Integer)                  |<br>
+	 * |           |--------------------|------------------|-------------------------------------------------------------------------------|<br>
+	 * |           | Bildhöhe           | 2 Bytes          | Anzahl der Zeilen (vorzeichenloses 16 Bit Integer)                            |<br>
+	 * |           |--------------------|------------------|-------------------------------------------------------------------------------|<br>
+	 * |           | Bits pro Bildpunkt | 1 Byte           | gültige Werte: 24                                                             |<br>
+	 * | Dateikopf |--------------------|------------------|-------------------------------------------------------------------------------|<br>
+	 * |           | Kompressionstyp    | 1 Byte           | 0 = unkomprimiert                                                             |<br>
+	 * |           |                    |                  | 1 = lauflängenkodiert (pixelweise)                                            |<br>
+	 * |           |                    |                  | 2 = huffman (byteweise)                                                       |<br>
+	 * |           |--------------------|------------------|-------------------------------------------------------------------------------|<br>
+	 * |           | Datensegmentgröße  | 8 Bytes          | Länge des Datensegments in Bytes (vorzeichenloses 64 Bit Integer)             |<br>
+	 * |           |--------------------|------------------|-------------------------------------------------------------------------------|<br>
+	 * |           | Prüfsumme          | 4 Bytes          | Prüfsumme über die Bytes des Datensegments (vorzeichenloses 32 Bit Integer)   |<br>
+	 * |--------------------------------|------------------|-------------------------------------------------------------------------------|<br>
+	 * |                                |                  | Bilddaten, komprimiert entsprechend der Kompressionstypangabe im Dateikopf.   |<br>
+	 * | Datensegment                   | variabel         | Bei Huffman Kompression ist zu Beginn des Datensegements der Huffman Baum     |<br>
+	 * |                                |                  | abgelegt, danach folgen direkt die komprimierten Daten.                       |<br>
+	 * -------------------------------------------------------------------------------------------------------------------------------------<br>
+	 * </code>
 	 * @param filePath the path to an existing propra image file.
 	 * @throws ImageHandlingException an exception is thrown when this
 	 *                                <code>ImagePropra</code> could not be created
@@ -23,7 +49,7 @@ public class ImagePropra extends Image {
 		super(fileHandler);
 	}
 
-	public ImagePropra(FileHandler fileHandler, CompressionType compressionMode) throws ImageHandlingException {
+	public ImagePropra(FileHandler fileHandler, CompressionFormat compressionMode) throws ImageHandlingException {
 		super(fileHandler, compressionMode);
 	}
 
@@ -32,11 +58,11 @@ public class ImagePropra extends Image {
 		headerLength = 28;
 		bitsPerPixel = 24;
 		fileExtension = "propra";
-		if(compressionMode == CompressionType.UNCOMPRESSED) {
+		if(compressionFormat == CompressionFormat.UNCOMPRESSED) {
 			compressionDescriptionInHeader = 0;
-		} else if(compressionMode == CompressionType.RLE) {
+		} else if(compressionFormat == CompressionFormat.RLE) {
 			compressionDescriptionInHeader = 1;
-		} else if(compressionMode == CompressionType.HUFFMAN) {
+		} else if(compressionFormat == CompressionFormat.HUFFMAN) {
 			compressionDescriptionInHeader = 2;
 		}
 
@@ -55,17 +81,17 @@ public class ImagePropra extends Image {
 
 		// Check if compression type is valid.
 		if (compressionDescriptionInHeader == 0) {
-			compressionMode = CompressionType.UNCOMPRESSED;
+			compressionFormat = CompressionFormat.UNCOMPRESSED;
 		} else if (compressionDescriptionInHeader == 1) {
-			compressionMode = CompressionType.RLE;			
+			compressionFormat = CompressionFormat.RLE;			
 		}  else if (compressionDescriptionInHeader == 2) {
-			compressionMode = CompressionType.HUFFMAN;
+			compressionFormat = CompressionFormat.HUFFMAN;
 		} else {
 			throw new ImageHandlingException("Invalid compression of source file.", ErrorCodes.INVALID_HEADERDATA);
 		}
 
 		// Check if actual image data length fits to dimensions given in the header.
-		if (fileHandler.getFile().length() - headerLength < height * width * 3 && compressionMode == CompressionType.UNCOMPRESSED) {
+		if (fileHandler.getFile().length() - headerLength < height * width * 3 && compressionFormat == CompressionFormat.UNCOMPRESSED) {
 			throw new ImageHandlingException(
 					"Source file corrupt. Image data length does not fit to header information.",
 					ErrorCodes.INVALID_HEADERDATA);
@@ -79,7 +105,7 @@ public class ImagePropra extends Image {
 		long dataLength = header[16] + (header[17] << 8) + (header[18] << 16) + (header[19] << 24) + (header[20] << 32)
 				+ (header[21] << 40) + (header[22] << 48) + (header[23] << 56);
 		// Compare the size of the data segment with the image dimensions
-		if (dataLength != width * height * 3 && this.compressionMode == CompressionType.UNCOMPRESSED) {
+		if (dataLength != width * height * 3 && this.compressionFormat == CompressionFormat.UNCOMPRESSED) {
 			throw new ImageHandlingException("Source file corrupt. Invalid image size information in header.",
 					ErrorCodes.INVALID_HEADERDATA);
 		}
@@ -113,7 +139,7 @@ public class ImagePropra extends Image {
 		super.createHeader();
 		byte[] proPraBytes = HEADER_TEXT.getBytes();
 		for (int i = 0; i < HEADER_TEXT.length(); i++) {
-			header[i] = proPraBytes[i];
+			header[i] = Byte.toUnsignedInt(proPraBytes[i]);
 		}
 	}
 
@@ -124,7 +150,7 @@ public class ImagePropra extends Image {
 		 * Write the length of the data segment into the header (little-endian).
 		 */
 		long sizeOfDataSegment = 0; 
-		if(compressionMode == CompressionType.UNCOMPRESSED) {
+		if(compressionFormat == CompressionFormat.UNCOMPRESSED) {
 			sizeOfDataSegment = width * height * 3;
 		} else {
 			sizeOfDataSegment = fileHandler.getFile().length() - headerLength;
@@ -147,12 +173,12 @@ public class ImagePropra extends Image {
 			header[24 + i] = checkSum[i];
 		}
 
-		fileHandler.writeDataIntoFile(checkSum, 24);
+		fileHandler.writeDataIntoFile(getHeader(), 0);
 	}
 
 	@Override
 	public long getImageDataLength() {
-		if(compressionMode == CompressionType.UNCOMPRESSED) {
+		if(compressionFormat == CompressionFormat.UNCOMPRESSED) {
 			return width * height * 3;
 		} else {
 			return fileHandler.getFile().length() - headerLength;

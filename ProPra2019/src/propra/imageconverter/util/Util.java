@@ -3,6 +3,9 @@ package propra.imageconverter.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import propra.imageconverter.error.ErrorCodes;
+import propra.imageconverter.error.ImageHandlingException;
+
 public class Util {
 
 	public static byte[] byteListToArray(List<Byte> bytes) {
@@ -55,8 +58,26 @@ public class Util {
 
 		return inputAsCharArray;
 	}
+	
+	public static List<Character> byteToCharList(byte input) {
+		List<Character> output = new ArrayList<Character>();
+		char[] inputAsChar = byteToCharArray(input);
+		for(Character currentChar : inputAsChar) {
+			output.add(currentChar);
+		}
+		return output;
+	}
+	
+	public static byte charListToByte(List<Character> input) throws ImageHandlingException {
+		return charArrayToByte(charListToArray(input));
+	}
 
-	public static byte charArrayToByte(char[] input) {
+	public static byte charArrayToByte(char[] input) throws ImageHandlingException {
+		if(input.length > 8) {
+			throw new ImageHandlingException(
+					"Cannot cast char-array with more than 8 entries to byte. ",
+					ErrorCodes.INVALID_USER_INPUT);
+		}
 		byte output = 0x0;
 		for (int i = 0; i < input.length; i++) {
 			output <<= 1;
@@ -80,7 +101,7 @@ public class Util {
 		return output;
 	}
 
-	public static byte getNextByte(char[] input, int offset) {
+	public static byte getNextByte(char[] input, int offset) throws ImageHandlingException {
 		byte output = 0x0;
 		if (offset < input.length - 8 && offset >= 0) {
 			char[] nextByte = new char[8];
@@ -90,6 +111,20 @@ public class Util {
 			output = charArrayToByte(nextByte);
 		}
 		return output;
+	}
+	
+	public static byte getNextByte(List<Character> input) throws ImageHandlingException {
+		int byteLength = 8;
+		if(input.size() < 8) {
+			byteLength = input.size();
+		}
+		
+		char[] inputAsChar = new char[8];
+		for(int i = 0; i < byteLength; i++) {
+			inputAsChar[i] = input.remove(i);
+		}
+		
+		return charArrayToByte(inputAsChar);
 	}
 	
 	public static int[] byteArrayToIntArray(byte[] input) {
@@ -106,6 +141,36 @@ public class Util {
 		for(int i = 0; i < input.length; i++) {
 			output.add(input[i]);
 		}
+		return output;
+	}
+	
+	public static char[] charListToArray(List<Character> input) {
+		char[] output = new char[input.size()];
+		for(int i = 0; i < input.size(); i++) {
+			output[i] = input.get(i);			
+		}
+		return output;
+	}
+	
+	public static List<Byte> charListToByteList(List<Character> input) throws ImageHandlingException {
+		List<Byte> output = new ArrayList<Byte>();
+		int outputByteCount = input.size() / 8;
+		if(input.size() % 8 != 0) {
+			outputByteCount++;
+		}
+		for(int i = 0; i < outputByteCount; i++) {			
+			char[] currentByteAsChar = new char[8]; 
+			for(int j = 0; j < 8; j++) {
+				if(input.size() > 0) {
+					currentByteAsChar[j] = input.remove(0);	
+				} else {
+					// Bit stream has finished. Fill up with padding bits.
+					currentByteAsChar[j] = '0';
+				}				
+			}			
+			output.add(Util.charArrayToByte(currentByteAsChar));
+		}
+		
 		return output;
 	}
 	
@@ -144,7 +209,7 @@ public class Util {
 		}
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws ImageHandlingException {
 		byte[] input = { 0x3 };
 		char[] inChars = byteArrayToCharArray(input);
 		System.out.println(inChars);

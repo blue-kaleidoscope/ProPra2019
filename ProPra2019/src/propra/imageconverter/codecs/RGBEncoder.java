@@ -55,4 +55,9 @@ public class RGBEncoder extends Encoder {
 		}
 		return null;
 	}
+	@Override
+	public void prepareEncoding(byte[] inputData) throws ImageHandlingException {
+		// Nothing to do here...
+		
+	}
 }

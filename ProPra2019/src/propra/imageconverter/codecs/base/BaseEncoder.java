@@ -169,4 +169,9 @@ public class BaseEncoder extends Encoder {
 
 		return Util.byteListToArray(encodedData);
 	}
+
+	@Override
+	public void prepareEncoding(byte[] inputData) throws ImageHandlingException {
+		//Nothing to do here...		
+	}
 }

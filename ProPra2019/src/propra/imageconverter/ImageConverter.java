@@ -16,10 +16,12 @@ public class ImageConverter {
 		try {
 			ArgumentHandler argHandler = new ArgumentHandler(args);
 			ConversionController conversionController = new ConversionController(
+					argHandler.getInputFormat(),
+					argHandler.getOutputFormat(),
 					argHandler.getConverterOperationMode(),
 					argHandler.getInputPath(),
 					argHandler.getOutputPath(),
-					argHandler.getCompressionOperationMode(),
+					argHandler.getOutputCompressionFormat(),
 					argHandler.getEncodingAlphabet());
 			conversionController.convert();
 		} catch (ImageHandlingException e1) {

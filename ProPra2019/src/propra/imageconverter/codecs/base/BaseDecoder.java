@@ -87,15 +87,6 @@ public class BaseDecoder extends Decoder {
 		return output;
 	}
 	
-	public static void main(String[] args) throws ImageHandlingException {
-		BaseDecoder d = new BaseDecoder();
-		String foobar = "CPNMUOJ1E8";
-		byte[] output = d.decode(foobar.getBytes());		
-		System.out.println(new String(output));
-		output = d.flush();
-		System.out.println(new String(output));
-	}
-	
 	@Override
 	public byte[] flush() throws ImageHandlingException {
 		decodedData.clear();

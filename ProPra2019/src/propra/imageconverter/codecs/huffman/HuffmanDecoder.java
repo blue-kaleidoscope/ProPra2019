@@ -1,8 +1,6 @@
 package propra.imageconverter.codecs.huffman;
 
 import propra.imageconverter.codecs.Decoder;
-import propra.imageconverter.codecs.Decoder.DECODING_STATES;
-import propra.imageconverter.codecs.huffman.HuffmanTree.Element;
 import propra.imageconverter.error.ErrorCodes;
 import propra.imageconverter.error.ImageHandlingException;
 import propra.imageconverter.util.Util;
@@ -25,12 +23,16 @@ public class HuffmanDecoder extends Decoder {
 	private int globalTreeLength;
 	private int globalBitSelector;
 
-	public HuffmanDecoder() {
-		super();
+	/**
+	 * 
+	 * @param byteCount the maximum number of bytes to be encoded by this decoder
+	 */
+	public HuffmanDecoder(long byteCount) {
+		super(byteCount);
 		tree = new HuffmanTree();
 		remainingBits = null;
 		globalBitSelector = 0;
-		globalTreeLength = 0;		
+		globalTreeLength = 0;
 	}
 
 	/**
@@ -53,6 +55,7 @@ public class HuffmanDecoder extends Decoder {
 					throw new ImageHandlingException("Invalid Huffman tree data given!", ErrorCodes.INVALID_HEADERDATA);
 				}
 			} else if (decodingState == DECODING_STATES.WAITING_FOR_DECODING_DATA) {
+				tree.createCodeTable();
 				int bytesToSkip = globalTreeLength / 8; // These bytes of inputData were used to build up the tree. They
 														// must
 														// be skipped.
@@ -75,7 +78,7 @@ public class HuffmanDecoder extends Decoder {
 				 * decoding of image data.
 				 */
 				for (int i = bitsToSkip; i < imageDataInBits.length; i++) {
-					// imageDataInBits is now used to reconstruct the image pixel data
+					// imageDataInBits is now used to reconstruct the image pixel data					
 					processNextBit(imageDataInBits[i] == '1');
 				}
 				globalBitSelector = inputDataLengthInBit; // All remaining bits from inputData have been "used" which were not used to build the tree.
@@ -133,17 +136,10 @@ public class HuffmanDecoder extends Decoder {
 					nextByte = 0x0;
 				}
 				numberOfNextBits = decodeBitsForTreeBuild(nextByte, false);
-				if(numberOfNextBits > 0) {
-					bitSelector++;	
-				}
+				bitSelector++;
+				
 			} else {
 				if (bitSelector + 8 <= bitRepresentation.length) {
-					/*
-					 * The next line takes the next 8 bits from the BitSet which represents the
-					 * inputData in bits and converts them into a byte. Therefore the index '0' is
-					 * used from the byte array. There is no other way in "casting" a BitSet into
-					 * one byte.
-					 */
 					nextByte = Util.getNextByte(bitRepresentation, bitSelector);
 					numberOfNextBits = decodeBitsForTreeBuild(nextByte, true);
 					if(numberOfNextBits > 0) {
@@ -158,7 +154,9 @@ public class HuffmanDecoder extends Decoder {
 				}
 			}
 		}
-		return (bitSelector - 1);
+		// We must reduce bitSelector by one because the current bit
+		// bitSelector is pointing to is already part of the data to be decoded!
+		return bitSelector - 1;
 	}
 
 	private int decodeBitsForTreeBuild(byte treeData, boolean addLeaf) {
@@ -185,8 +183,9 @@ public class HuffmanDecoder extends Decoder {
 	}
 
 	private void processNextBit(boolean bitCode) {
-		Element nextElement = tree.traverse(bitCode);
-		if (nextElement.getType() == HuffmanTree.NODE_TYPE.LEAF) {
+		HuffmanElement nextElement = tree.traverse(bitCode);
+		if (nextElement.getType() == HuffmanTree.NODE_TYPE.LEAF && alreadyDecodedBytes < byteCount) {	
+			alreadyDecodedBytes++;
 			decodedData.add(nextElement.getData());
 		}
 	}
@@ -195,5 +194,5 @@ public class HuffmanDecoder extends Decoder {
 	public byte[] flush() throws ImageHandlingException {
 		// Nothing to do here
 		return null;
-	}
+	}	
 }

@@ -14,7 +14,8 @@ public enum ErrorCodes {
 	IO_ERROR(6),
 	INVALID_FILE(7),
 	INVALID_COMPRESSION(8),
-	INVALID_USER_INPUT(9);
+	INVALID_USER_INPUT(9),
+	INVALID_ARGUMENT(10);
 	
 	
 	private int errorCode;

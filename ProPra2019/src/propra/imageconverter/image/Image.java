@@ -6,6 +6,7 @@ import propra.imageconverter.error.ErrorCodes;
 import propra.imageconverter.error.ImageHandlingException;
 import propra.imageconverter.util.FileHandler;
 import propra.imageconverter.util.Util;
+import propra.imageconverter.util.arguments.CompressionFormat;
 
 /**
  * This class describes an image which can be handled by the ImageConverter.
@@ -22,13 +23,7 @@ public abstract class Image {
 	protected byte bitsPerPixel;
 	protected String fileExtension;
 	protected FileHandler fileHandler;
-	protected CompressionType compressionMode;	
-
-	public enum CompressionType {
-		UNCOMPRESSED,
-		RLE,
-		HUFFMAN
-	}
+	protected CompressionFormat compressionFormat;
 	
 	protected int headerHeight;
 	protected int headerWidth;
@@ -58,13 +53,20 @@ public abstract class Image {
 		checkHeader();		
 	}
 
-	public Image(FileHandler fileHandler, CompressionType compressionMode) throws ImageHandlingException {
+	public Image(FileHandler fileHandler, CompressionFormat compressionFormat) throws ImageHandlingException {
 		if (fileHandler == null) {
 			throw new ImageHandlingException(
 					"Invalid output file. Cannot create Image.", ErrorCodes.IO_ERROR);
 		}
+		
+		if(compressionFormat == CompressionFormat.AUTO) {
+			throw new ImageHandlingException(
+					"'auto' is not allowed as an output compression format.", ErrorCodes.INVALID_ARGUMENT); 
+		}
+		
+		
 		this.fileHandler = fileHandler;
-		this.compressionMode = compressionMode;
+		this.compressionFormat = compressionFormat;
 		setProperties();		
 		createHeader();
 	}
@@ -98,9 +100,13 @@ public abstract class Image {
 	}
 	
 	public abstract long getImageDataLength();
+	
+	public long getUncompressedImageDataLength() {
+		return width * height * 3;
+	}
 
-	public CompressionType getCompressionMode() {
-		return compressionMode;
+	public CompressionFormat getCompressionMode() {
+		return compressionFormat;
 	}
 
 	public void setDimensions(Image inputImage) throws ImageHandlingException {

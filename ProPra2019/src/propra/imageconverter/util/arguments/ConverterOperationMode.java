@@ -1,19 +1,11 @@
 package propra.imageconverter.util.arguments;
 
 public enum ConverterOperationMode {
-	
-	TGA_TO_PROPRA,
-	PROPRA_TO_TGA,
-	TGA_TO_TGA,
-	PROPRA_TO_PROPRA,
+	CONVERT,
 	CODE_BASE32,
 	DECODE_BASE32,
 	CODE_BASEN,
 	DECODE_BASEN;
-	
-	public boolean operationIsConversion() {
-		return this.ordinal() <= PROPRA_TO_PROPRA.ordinal();
-	}
 	
 	public boolean operationIsBaseCoding() {
 		return this.ordinal() >= CODE_BASE32.ordinal();

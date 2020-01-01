@@ -174,7 +174,7 @@ public class FileHandler {
 					ErrorCodes.IO_ERROR);
 		}
 		try {
-			for (int i = 0; i < inputData.length; i++) {
+			for (int i = offset; i < inputData.length; i++) {
 				raf.seek(i);
 				raf.write(inputData[i]);
 			}
@@ -198,6 +198,18 @@ public class FileHandler {
 					"Error while skipping bytes",
 					ErrorCodes.IO_ERROR);
 		}
+	}
+	
+	public void reset() throws ImageHandlingException {
+		try {
+			inputStream.close();
+			inputStream = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE);
+		} catch (IOException e) {
+			throw new ImageHandlingException(
+					"Error while resetting this input stream: " + filePath,
+					ErrorCodes.IO_ERROR);
+		}
+		
 	}
 
 }

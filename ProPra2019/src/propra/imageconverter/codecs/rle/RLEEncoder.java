@@ -4,127 +4,155 @@ import java.util.ArrayList;
 import java.util.List;
 
 import propra.imageconverter.codecs.Encoder;
+import propra.imageconverter.error.ErrorCodes;
 import propra.imageconverter.error.ImageHandlingException;
 import propra.imageconverter.util.Util;
 
 public class RLEEncoder extends Encoder {
 
-	/**
-	 * Length of one image line as byte count. This field gets used when this
-	 * <code>Encoder</code> is used for compressing images. Example: If an image is
-	 * 9 pixel wide and each pixel consists of three bytes then this field must be
-	 * set with 9 * 3 = 27.
-	 */
+	private List<Byte> currentLine;
+	private List<Byte> inputData;
+	private final int MAX_PIXEL_STREAK = 128;
 	private int lineLength;
 
-	/**
-	 * Creates a new <code>RLEEncoder</code> to encode images using the run length
-	 * encoding algorithm.
-	 * 
-	 * @param lineLength length of one image line as byte count.Example: If an image
-	 *                   is 9 pixel wide and each pixel consists of three bytes then
-	 *                   this field must be set with 9 * 3 = 27.
-	 */
-	public RLEEncoder(int lineLength) {
-		super();
-		this.lineLength = lineLength;
+	public RLEEncoder(int lineLength) throws ImageHandlingException {
+		this.lineLength = lineLength * 3;
+		currentLine = new ArrayList<Byte>();
 	}
 
-	/**
-	 * Performs run-length-encoding on the given data and returns the run-length-encoded data.
-	 */
-	@Override	
+	@Override
 	public byte[] encode(byte[] inputData) throws ImageHandlingException {
+		this.inputData = Util.byteArrayToList(inputData);
+		encodedData.clear();
+		getNextLine();
+		while (encodingState == ENCODING_STATES.ENCODING) {
+			int equalPixels = 0;
+			List<Byte> nextPixel;
+			List<Byte> currentPixel = getNextPixel();
+			List<Byte> unequalPixels = new ArrayList<Byte>();
 
-		int equalPixels = 0;
-		int unequalPixels = 0;
-
-		List<Byte> outputDatasegment = new ArrayList<Byte>();
-
-		for (int i = 0; i < inputData.length; i += 3) {
-			if (i == inputData.length - 3) {
-				// Last pixel reached
-				if (equalPixels > 0) {
-					outputDatasegment.add((byte) (0x80 + equalPixels));
-					// Before current pixel there was a streak of equal pixels which gets written
-					outputDatasegment.add(inputData[i]);
-					outputDatasegment.add(inputData[i + 1]);
-					outputDatasegment.add(inputData[i + 2]);
-
-				} else {
-					// Raw pixels get written
-					outputDatasegment.add((byte) unequalPixels);
-					int arrayIndexUnequalPixel = unequalPixels;
-					for (int j = 0; j <= unequalPixels; j++) {
-						outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel]);
-						outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel + 1]);
-						outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel + 2]);
-						arrayIndexUnequalPixel--;
+			while ((nextPixel = getNextPixel()) != null) {
+				if (equals(currentPixel, nextPixel)) {
+					if (unequalPixels.size() > 0) {
+						encodedData.add(getControlByte(unequalPixels.size() / 3, false));
+						encodedData.addAll(unequalPixels);
+						unequalPixels.clear();
 					}
-				}
-			} else {
-				if (((i + 1) % lineLength == 0 && i > 0) || equalPixels == 127 || unequalPixels == 127) {
-					// End of image line reached or maximum length of possible 7 bit pixel counter
-					// reached
+					equalPixels++;
+				} else {
 					if (equalPixels > 0) {
-						// Equal pixels count gets written
-						outputDatasegment.add((byte) (0x80 + equalPixels));
-						outputDatasegment.add(inputData[i]);
-						outputDatasegment.add(inputData[i + 1]);
-						outputDatasegment.add(inputData[i + 2]);
+						encodedData.add(getControlByte(equalPixels, true));
+						encodedData.addAll(currentPixel);
 						equalPixels = 0;
 					} else {
-						// Raw pixels get written
-						outputDatasegment.add((byte) unequalPixels);
-						int arrayIndexUnequalPixel = unequalPixels;
-						for (int j = 0; j <= unequalPixels; j++) {
-							outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel]);
-							outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel + 1]);
-							outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel + 2]);
-							arrayIndexUnequalPixel--;
-						}
-						unequalPixels = 0;
-					}
-				} else {
-					if (inputData[i] == inputData[i + 3] && inputData[i + 1] == inputData[i + 4]
-							&& inputData[i + 2] == inputData[i + 5]) {
-						// Current and next pixel are equal
-						equalPixels++;
-						if (unequalPixels > 0) {
-							// Before current pixel there were unequal pixels --> They get written as raw
-							// pixels
-							outputDatasegment.add((byte) (unequalPixels - 1));
-							int arrayIndexUnequalPixel = unequalPixels;
-							for (int j = 0; j < unequalPixels; j++) {
-								outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel]);
-								outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel + 1]);
-								outputDatasegment.add(inputData[i - 3 * arrayIndexUnequalPixel + 2]);
-								arrayIndexUnequalPixel--;
-							}
-							unequalPixels = 0;
-						}
-					} else {
-						// Current and next pixel are unequal
-						if (equalPixels > 0) {
-							// Before current pixel there was a streak of equal pixels which gets written
-							outputDatasegment.add((byte) (0x80 + equalPixels));
-							outputDatasegment.add(inputData[i]);
-							outputDatasegment.add(inputData[i + 1]);
-							outputDatasegment.add(inputData[i + 2]);
-							equalPixels = 0;
-						} else {
-							unequalPixels++;
-						}
+						unequalPixels.addAll(currentPixel);
 					}
 				}
+
+				if (equalPixels == MAX_PIXEL_STREAK) {
+					encodedData.add(getControlByte(MAX_PIXEL_STREAK - 1, true));
+					encodedData.addAll(currentPixel);
+					equalPixels = 0;
+				}
+
+				if (unequalPixels.size() / 3 == MAX_PIXEL_STREAK) {
+					encodedData.add(getControlByte(MAX_PIXEL_STREAK, false));
+					encodedData.addAll(unequalPixels);
+					unequalPixels.clear();
+				}
+
+				currentPixel = nextPixel;
 			}
+
+			if (equalPixels == 0) {
+				unequalPixels.addAll(currentPixel);
+			}
+
+			if (equalPixels > 0) {
+				encodedData.add(getControlByte(equalPixels, true));
+				encodedData.addAll(currentPixel);
+			} else if (unequalPixels.size() > 0) {
+				encodedData.add(getControlByte(unequalPixels.size() / 3, false));
+				encodedData.addAll(unequalPixels);
+			}
+
+			currentLine.clear();
+			getNextLine();
 		}
-		return Util.byteListToArray(outputDatasegment);
+
+		return Util.byteListToArray(encodedData);
 	}
 
 	@Override
 	public byte[] flush() throws ImageHandlingException {
-		// TODO Auto-generated method stub
+		if (currentLine.size() != 0) {
+			throw new ImageHandlingException(
+					"Not enough bytes were given in order to perform RLE encoding. Missing number of bytes: "
+							+ (lineLength - currentLine.size()),
+					ErrorCodes.INVALID_COMPRESSION);
+		}
 		return null;
+	}
+
+	private void getNextLine() {
+		encodingState = ENCODING_STATES.WAITING_FOR_DATA;
+		int removeIndex = 0;
+		for (Byte currentByte : inputData) {
+			removeIndex++;
+			currentLine.add(currentByte);
+			if (currentLine.size() == lineLength) {
+				encodingState = ENCODING_STATES.ENCODING;
+				break;
+			}
+		}
+		inputData.subList(0, removeIndex).clear();
+	}
+
+	private List<Byte> getNextPixel() throws ImageHandlingException {
+		if (currentLine.size() >= 3) {
+			List<Byte> output = new ArrayList<Byte>();
+			for (int i = 0; i < 3; i++) {
+				output.add(currentLine.get(i));
+			}
+			currentLine.subList(0, 3).clear();
+			return output;
+		}
+
+		if (currentLine.size() > 0) {
+			throw new ImageHandlingException("An error occured during RLE encoding.", ErrorCodes.INVALID_COMPRESSION);
+		}
+
+		return null;
+	}
+
+	private boolean equals(List<Byte> pixel1, List<Byte> pixel2) throws ImageHandlingException {
+		if (pixel1.size() != 3 || pixel2.size() != 3) {
+			throw new ImageHandlingException("An error occured during RLE encoding. Could not compare two pixels.",
+					ErrorCodes.INVALID_COMPRESSION);
+		}
+
+		boolean pixelsEqual = true;
+		for (int i = 0; i < 3; i++) {
+			if (pixel1.get(i) != pixel2.get(i)) {
+				pixelsEqual = false;
+				break;
+			}
+		}
+		return pixelsEqual;
+	}
+
+	private byte getControlByte(int pixelCount, boolean equalPixels) {
+		if (!equalPixels)
+			pixelCount--;
+		return (byte) (equalPixels == true ? 0x80 + pixelCount : pixelCount);
+	}
+
+	/**
+	 * This <code>RLEEncoder</code> does not need any preparation. The method
+	 * <code>encode(byte[] inputData)</code> can directly be called.
+	 */
+	@Override
+	public void prepareEncoding(byte[] inputData) throws ImageHandlingException {
+		// Nothing to do here
 	}
 }
