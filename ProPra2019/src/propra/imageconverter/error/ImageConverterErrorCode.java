@@ -1,11 +1,11 @@
 package propra.imageconverter.error;
 
 /**
- * Error codes when using ImageConverter.
+ * Error codes which might be produced when using the <code>ImageConverter</code>.
  * @author Oliver Eckstein
  *
  */
-public enum ErrorCodes {
+public enum ImageConverterErrorCode {
 	INVALID_FILEPATH(1),
 	INVALID_FILEFORMAT(2),
 	INVALID_HEADERDATA(3),
@@ -20,7 +20,7 @@ public enum ErrorCodes {
 	
 	private int errorCode;
 	
-	ErrorCodes(int errorCode) {
+	ImageConverterErrorCode(int errorCode) {
 		this.errorCode = errorCode;		
 	}
 	

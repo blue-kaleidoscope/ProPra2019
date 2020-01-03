@@ -5,11 +5,19 @@ import java.util.List;
 
 import propra.imageconverter.error.ImageHandlingException;
 
+/**
+ * An <code>Encoder</code> encodes images and files based on the implemented
+ * algorithm of this <code>Encoder</code>.
+ * 
+ * @author Oliver Eckstein
+ *
+ */
 public abstract class Encoder {
+
 	/**
 	 * To define in which state this encoder is.
 	 */
-	protected ENCODING_STATES encodingState;
+	protected EncodingState encodingState;
 
 	/**
 	 * The encoded data of this encoding run.
@@ -17,21 +25,20 @@ public abstract class Encoder {
 	protected List<Byte> encodedData;
 
 	/**
-	 * States this encoder can have. Either it is waiting for data or for data which
-	 * should be decoded.
+	 * States this encoder can have.
 	 * 
 	 * @author Oliver Eckstein
 	 *
 	 */
-	protected enum ENCODING_STATES {
+	protected enum EncodingState {
 		PREPARING, WAITING_FOR_DATA, WRITING_HEADER_DATA, ENCODING, FINISHED
 	}
 
 	/**
-	 * To create a new <code>Encoder</code>.
+	 * Creates a new <code>Encoder</code> and lets it wait for data to be encoded.
 	 */
 	public Encoder() {
-		encodingState = ENCODING_STATES.FINISHED;
+		encodingState = EncodingState.FINISHED;
 		encodedData = new ArrayList<Byte>();
 	}
 
@@ -47,7 +54,7 @@ public abstract class Encoder {
 	public abstract void prepareEncoding(byte[] inputData) throws ImageHandlingException;
 
 	/**
-	 * To encode data.
+	 * To encode data using this <code>Encoder</code>'s algorithm.
 	 * 
 	 * @param inputData the data to be encoded
 	 * @return the encoded data
@@ -55,10 +62,20 @@ public abstract class Encoder {
 	 */
 	public abstract byte[] encode(byte[] inputData) throws ImageHandlingException;
 
-	public abstract byte[] flush() throws ImageHandlingException;
-	
 	/**
-	 * To reset this <code>Encoder</code> and prepare it for a new conversion.
+	 * Lets this <code>Encoder</code> return the remaining data to be encoded. This
+	 * method should be called after the last encode-pass has been executed to
+	 * ensure that all data gets encoded.
+	 * 
+	 * @return the remaining data to be encoded.
+	 * @throws ImageHandlingException when an error occurred during encoding
+	 */
+	public abstract byte[] flush() throws ImageHandlingException;
+
+	/**
+	 * To reset this <code>Encoder</code> and prepare it for a new conversion. After
+	 * calling this method this <code>Encoder</code> is in the same state as it was
+	 * after creating it.
 	 */
 	public abstract void reset();
 

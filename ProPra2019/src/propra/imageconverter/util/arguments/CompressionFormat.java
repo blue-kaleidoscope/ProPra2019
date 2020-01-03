@@ -1,7 +1,11 @@
 package propra.imageconverter.util.arguments;
 
-public enum CompressionFormat {
-	
+/**
+ * Allowed source or target compression types when using <code>ImageConverter</code>.
+ * @author Oliver Eckstein
+ *
+ */
+public enum CompressionFormat {	
 	UNCOMPRESSED,
 	RLE,
 	HUFFMAN,

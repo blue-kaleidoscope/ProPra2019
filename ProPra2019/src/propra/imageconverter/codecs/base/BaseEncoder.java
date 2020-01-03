@@ -4,57 +4,89 @@ import java.util.ArrayList;
 import java.util.List;
 
 import propra.imageconverter.codecs.Encoder;
-import propra.imageconverter.error.ErrorCodes;
+import propra.imageconverter.error.ImageConverterErrorCode;
 import propra.imageconverter.error.ImageHandlingException;
 import propra.imageconverter.util.Util;
 
+/**
+ * A <code>BaseEncoder</code> encodes files using a base-n algorithm. It
+ * supports base-2, base-4, base-8, base-16, base-32 and base-64 codec.
+ * 
+ * @author Oliver Eckstein
+ *
+ */
 public class BaseEncoder extends Encoder {
 
+	/**
+	 * The standard base-32 alphabet.
+	 */
 	private static final String BASE32_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
-	private String alphabet;
 
 	/**
-	 * How many bits form one output byte. Example: Base-32 5 bits form one output
-	 * byte.
+	 * This <code>BaseEncoder</code>'s encoding alphabet.
+	 */
+	private String encodingAlphabet;
+
+	/**
+	 * Of how many bits consists one output byte. Example with base-32: 5 bits form
+	 * one output byte.
 	 */
 	private int outputByteLength;
+
+	/**
+	 * Of how many bytes consists one package which will get encoded.
+	 */
 	int inputPackageByteCount;
 
+	/**
+	 * The remaining bytes if this <code>BaseEncoder</code> received less bytes to
+	 * encode than the size of <code>inputPackageByteCount</code>.
+	 */
 	private List<Byte> remainingBytes;
 
-	public BaseEncoder(String alphabet) throws ImageHandlingException {
+	/**
+	 * Creates a new <code>BaseEncoder</code.
+	 * 
+	 * @param encodingAlphabet the encoding alphabet.
+	 * @throws ImageHandlingException when the given alphabet is not a valid
+	 *                                base-nencoding/decoding alphabet.
+	 */
+	public BaseEncoder(String encodingAlphabet) throws ImageHandlingException {
 		super();
-		checkAlphabet(alphabet);
-		this.alphabet = alphabet;
-		outputByteLength = (int) (Math.log(alphabet.length()) / Math.log(2));
+		checkAlphabet(encodingAlphabet);
+		this.encodingAlphabet = encodingAlphabet;
+		outputByteLength = (int) (Math.log(encodingAlphabet.length()) / Math.log(2));
 		inputPackageByteCount = Util.lcm(8, outputByteLength) / 8;
 		remainingBytes = new ArrayList<Byte>();
 
 	}
 
-	public BaseEncoder() {
-		super();
-		this.alphabet = BASE32_ALPHABET;
-		outputByteLength = 5;
-		inputPackageByteCount = 5;
-		remainingBytes = new ArrayList<Byte>();
+	/**
+	 * Creates a new base-32 encoder <code>BaseEncoder</code>.
+	 * 
+	 * @throws ImageHandlingException when an error occurred during decoding.
+	 */
+	public BaseEncoder() throws ImageHandlingException {
+		this(BASE32_ALPHABET);
 	}
 
 	@Override
 	public byte[] encode(byte[] inputData) throws ImageHandlingException {
 		encodedData.clear();
 		List<Byte> inputAsList = Util.byteArrayToList(inputData);
-		
+
+		// Collect byte by byte and start encoding when enough bytes are added to
+		// 'remainingBytes'
 		for (Byte currentByte : inputAsList) {
 			if (currentByte != null) {
 				remainingBytes.add(currentByte);
-				encodingState = ENCODING_STATES.WAITING_FOR_DATA;
+				encodingState = EncodingState.WAITING_FOR_DATA;
 			}
 
 			if (remainingBytes.size() == inputPackageByteCount) {
 				encodedData.addAll(encodePackage(remainingBytes, inputPackageByteCount));
 				remainingBytes.clear();
-				encodingState = ENCODING_STATES.FINISHED;
+				encodingState = EncodingState.FINISHED;
 			}
 		}
 
@@ -62,10 +94,14 @@ public class BaseEncoder extends Encoder {
 	}
 
 	private List<Byte> encodePackage(List<Byte> inputData, int inputPackageByteCount) {
-		byte[] alphaBytes = alphabet.getBytes();
+		byte[] alphaBytes = encodingAlphabet.getBytes();
+		// byteBuffer will contain all bits from this input byte package
+		// the bits will be extracted in order to perform the encoding
 		long byteBuffer = 0;
 		int outputPackageByteCount = inputPackageByteCount * 8 / outputByteLength;
 		if ((inputPackageByteCount * 8) % outputByteLength != 0) {
+			// When an input byte package is not complete (i.e. at the end of a file to be
+			// encoded)
 			outputPackageByteCount++;
 		}
 
@@ -74,7 +110,10 @@ public class BaseEncoder extends Encoder {
 			byteBuffer <<= 8;
 			byteBuffer |= inputData.get(i) & 0xFF;
 		}
+		// byteBuffer now contains all bits from the current byte package
+		// Now we extract the bits byte wise and encode them
 
+		// Removes the current byte from the byteBuffer
 		byte removalMask = 0;
 		for (int i = 0; i < outputByteLength; i++) {
 			removalMask <<= 1;
@@ -104,17 +143,13 @@ public class BaseEncoder extends Encoder {
 		return output;
 	}
 
-	public static void main(String[] args) throws ImageHandlingException {
-		BaseEncoder b32 = new BaseEncoder("abcdefgh");
-		String fooba = "foo";
-		//String r = "ar";
-		byte[] output1 = b32.encode(fooba.getBytes());
-		System.out.println(new String(output1));
-		//byte[] output2 = b32.encode(r.getBytes());		
-		output1 = b32.flush();
-		System.out.println(new String(output1));
-	}
-
+	/**
+	 * To check if a given alphabet is a valid base-n encoding/decoding alphabet.
+	 * 
+	 * @param alphabet the alphabet potentially used for encoding/decoding.
+	 * @throws ImageHandlingException when the given alphabet is not a valid base-n
+	 *                                encoding/decoding alphabet.
+	 */
 	public static void checkAlphabet(String alphabet) throws ImageHandlingException {
 		checkLength(alphabet);
 		checkForDuplicates(alphabet);
@@ -137,7 +172,7 @@ public class BaseEncoder extends Encoder {
 			break;
 		default:
 			throw new ImageHandlingException("Invalid encoding alphabet. Allowed length: 2, 4, 8, 16, 32, 64.",
-					ErrorCodes.INVALID_USER_INPUT);
+					ImageConverterErrorCode.INVALID_USER_INPUT);
 
 		}
 	}
@@ -149,20 +184,23 @@ public class BaseEncoder extends Encoder {
 				if (alphabetInChars[i] == alphabetInChars[j]) {
 					throw new ImageHandlingException(
 							"Invalid encoding alphabet. Must not contain duplicate characters.",
-							ErrorCodes.INVALID_USER_INPUT);
+							ImageConverterErrorCode.INVALID_USER_INPUT);
 				}
 			}
 		}
 	}
 
+	/**
+	 * Returns the last base-n encoded bytes of this <code>BaseEncoder</code>.
+	 */
 	@Override
 	public byte[] flush() throws ImageHandlingException {
 		encodedData.clear();
-		if (encodingState == ENCODING_STATES.WAITING_FOR_DATA) {
+		if (encodingState == EncodingState.WAITING_FOR_DATA) {
 			if (remainingBytes.size() > 0) {
 				int lastInputPackageLength = remainingBytes.size() % inputPackageByteCount;
 				encodedData.addAll(encodePackage(remainingBytes, lastInputPackageLength));
-				encodingState = ENCODING_STATES.FINISHED;
+				encodingState = EncodingState.FINISHED;
 				remainingBytes.clear();
 			}
 		}
@@ -172,7 +210,7 @@ public class BaseEncoder extends Encoder {
 
 	@Override
 	public void prepareEncoding(byte[] inputData) throws ImageHandlingException {
-		//Nothing to do here...		
+		// Nothing to do here...
 	}
 
 	@Override

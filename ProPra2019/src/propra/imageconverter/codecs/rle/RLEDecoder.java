@@ -7,6 +7,13 @@ import propra.imageconverter.codecs.Decoder;
 import propra.imageconverter.error.ImageHandlingException;
 import propra.imageconverter.util.Util;
 
+/**
+ * An <code>RLEDecoder</code> decodes images which were encoded using the
+ * run-length-encoding algorithm.
+ * 
+ * @author Oliver Eckstein
+ *
+ */
 public class RLEDecoder extends Decoder {
 
 	/**
@@ -16,12 +23,29 @@ public class RLEDecoder extends Decoder {
 	 */
 	private List<Byte> remainingBytes;
 
+	/**
+	 * The number of equal or unequal pixels following after a header byte. 
+	 */
 	private int pixelCount;
+	
+	/**
+	 * The number of already processed bytes after the last header byte.
+	 */
 	private int processedBytes;
+	
+	/**
+	 * Indicates whether equal or unequal pixels follow after the last header byte.
+	 */
 	private boolean equalPixel;
 
-	public RLEDecoder(long byteCount) {
-		super(byteCount);
+	/**
+	 * Creates a new <code>RLEDecoder</code>.
+	 * 
+	 * @param maxCountBytesToDecode the maximum number of bytes this
+	 *                              <code>RLEDecoder</code> should be decoding.
+	 */
+	public RLEDecoder(long maxCountBytesToDecode) {
+		super(maxCountBytesToDecode);
 		remainingBytes = new ArrayList<Byte>();
 		pixelCount = 0;
 		equalPixel = false;
@@ -31,34 +55,38 @@ public class RLEDecoder extends Decoder {
 	public byte[] decode(byte[] inputData) throws ImageHandlingException {
 		List<Byte> inputAsList = Util.byteArrayToList(inputData);
 		decodedData.clear();
-		if(alreadyDecodedBytes < byteCount) {
+		// Ignore data which exceeds maxCountBytesToDecode
+		if (alreadyDecodedBytes < maxCountBytesToDecode) {
+			// Retrieve byte by byte
 			for (Byte currentByte : inputAsList) {
-				if (decodingState == DECODING_STATES.WAITING_FOR_HEADER_DATA) {
+				// The first byte MUST be a header byte
+				if (decodingState == DecodingState.WAITING_FOR_HEADER_DATA) {
+					// Check whether it indicates equal or unequal pixels and the pixel count
 					pixelCount = getPixelCount(currentByte);
 					processedBytes = 0;
 					equalPixel = equalPixels(currentByte);
-					decodingState = DECODING_STATES.WAITING_FOR_DECODING_DATA;					
+					decodingState = DecodingState.WAITING_FOR_DECODING_DATA;
 					remainingBytes.clear();
-				} else {
-					if (equalPixel) {
-						remainingBytes.add(currentByte);
-						alreadyDecodedBytes++;
+				} else {					
+					remainingBytes.add(currentByte);
+					if (equalPixel) {												
 						if (++processedBytes == 3) {
-							decodingState = DECODING_STATES.WAITING_FOR_HEADER_DATA;
+							decodingState = DecodingState.WAITING_FOR_HEADER_DATA;
 							for (int i = 0; i < pixelCount; i++) {
-								decodedData.addAll(remainingBytes);							
+								alreadyDecodedBytes += remainingBytes.size();
+								decodedData.addAll(remainingBytes);
 							}
 						}
-					} else {
-						remainingBytes.add(currentByte);
-						if(++processedBytes == pixelCount * 3) {
-							decodingState = DECODING_STATES.WAITING_FOR_HEADER_DATA;
+					} else {						
+						if (++processedBytes == pixelCount * 3) {
+							decodingState = DecodingState.WAITING_FOR_HEADER_DATA;
 							decodedData.addAll(remainingBytes);
+							alreadyDecodedBytes += remainingBytes.size();
 						}
 					}
 				}
 			}
-		}		
+		}
 
 		return Util.byteListToArray(decodedData);
 	}

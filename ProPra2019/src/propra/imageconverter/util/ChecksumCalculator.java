@@ -2,6 +2,11 @@ package propra.imageconverter.util;
 
 import propra.imageconverter.error.ImageHandlingException;
 
+/**
+ * A <code>ChecksumCalculator</code> calculates the check sum for PROPRA image files.
+ * @author Oliver Eckstein
+ *
+ */
 public class ChecksumCalculator {
 	
 	private final int X = 65513;
@@ -10,6 +15,10 @@ public class ChecksumCalculator {
 	private long bytesInTotal = 0;
 	private FileHandler fileHandler;
 
+	/**
+	 * To create a new <code>ChecksumCalculator</code>.
+	 * @param fileHandler the file handler which reads the PROPRA image's image data segment.
+	 */
 	public ChecksumCalculator(FileHandler fileHandler) {
 		a_i = 0;
 		b_i = 1;
@@ -21,12 +30,12 @@ public class ChecksumCalculator {
 	 * V3.0.
 	 * 
 	 * @param inputData the data of which this checksum shall be calculated
-	 * @throws ImageHandlingException 
+	 * @throws ImageHandlingException when an error occurred handling the image file
 	 */
 	public byte[] getCheckSum(int headerLength) throws ImageHandlingException {
 		
 		fileHandler.createFile();
-		fileHandler.openInputFile();
+		fileHandler.openInputStream();
 		fileHandler.skipNBytes(headerLength);
 		
 		byte[] inputData;
